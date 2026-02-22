@@ -27,8 +27,10 @@ pub struct Input {
 /// Contains the number of rows affected by the update.
 pub type Output = u64;
 
-impl crate::StatementParams for Input {
+impl crate::Statement for Input {
     type Result = Output;
+
+    const RETURNS_ROWS: bool = false;
 
     const SQL: &str = "update album\n\
                        set released = $1\n\
@@ -44,8 +46,9 @@ impl crate::StatementParams for Input {
     }
 
     fn decode_result(
-        rows: Vec<tokio_postgres::Row>,
+        _rows: Vec<tokio_postgres::Row>,
+        affected_rows: u64,
     ) -> Result<Self::Result, tokio_postgres::Error> {
-        Ok(rows.len() as u64)
+        Ok(affected_rows)
     }
 }

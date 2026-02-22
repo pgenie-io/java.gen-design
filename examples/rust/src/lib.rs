@@ -7,13 +7,14 @@
 //! - [`types`] – PostgreSQL enum and composite type mappings.
 
 pub mod statements;
+pub mod types;
+
 #[cfg(test)]
 mod tests;
-pub mod types;
 
 /// Implemented by each query's parameter struct. Provides a uniform way to
 /// prepare and execute statements against a [`tokio_postgres::Client`].
-pub trait StatementParams {
+pub trait Statement {
     /// The type returned when the statement is successfully executed.
     type Result;
 
@@ -27,8 +28,18 @@ pub trait StatementParams {
     /// allocation).
     fn encode_params(&self) -> impl AsRef<[&(dyn tokio_postgres::types::ToSql + Sync)]>;
 
-    fn decode_result(rows: Vec<tokio_postgres::Row>)
-        -> Result<Self::Result, tokio_postgres::Error>;
+    /// Whether the statement returns rows (i.e. is a `SELECT` or contains a
+    /// `RETURNING` clause).  When `true` the execution functions use
+    /// [`tokio_postgres::GenericClient::query`] and forward the rows together
+    /// with `rows.len() as u64` as the affected-rows count.  When `false` they
+    /// use [`tokio_postgres::GenericClient::execute`] instead, which discards
+    /// any rows but returns the actual number of rows affected by the statement.
+    const RETURNS_ROWS: bool;
+
+    fn decode_result(
+        rows: Vec<tokio_postgres::Row>,
+        affected_rows: u64,
+    ) -> Result<Self::Result, tokio_postgres::Error>;
 }
 
 pub struct Session {
@@ -37,90 +48,36 @@ pub struct Session {
 }
 
 impl Session {
-    pub async fn execute<P: StatementParams>(
+    pub async fn execute<P: Statement>(
         &self,
         params: &P,
     ) -> Result<P::Result, tokio_postgres::Error> {
         let params = params.encode_params();
-        let rows = if self.no_preparing {
-            self.base.query(P::SQL, params.as_ref()).await?
+        let (rows, affected_rows) = if P::RETURNS_ROWS {
+            let rows = if self.no_preparing {
+                self.base.query(P::SQL, params.as_ref()).await?
+            } else {
+                let prepared = self
+                    .base
+                    .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
+                    .await?;
+                self.base.query(&prepared, params.as_ref()).await?
+            };
+            let affected = rows.len() as u64;
+            (rows, affected)
         } else {
-            let prepared = self
-                .base
-                .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
-                .await?;
-            self.base.query(&prepared, params.as_ref()).await?
+            let affected = if self.no_preparing {
+                self.base.execute(P::SQL, params.as_ref()).await?
+            } else {
+                let prepared = self
+                    .base
+                    .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
+                    .await?;
+                self.base.execute(&prepared, params.as_ref()).await?
+            };
+            (vec![], affected)
         };
-        P::decode_result(rows)
-    }
-
-    pub async fn transaction(&mut self) -> Result<Transaction<'_>, deadpool_postgres::PoolError> {
-        Ok(Transaction {
-            base: self.base.transaction().await?,
-            no_preparing: self.no_preparing,
-        })
-    }
-
-    pub fn build_transaction(
-        &mut self,
-    ) -> Result<TransactionBuilder<'_>, deadpool_postgres::PoolError> {
-        Ok(TransactionBuilder {
-            base: self.base.build_transaction(),
-            no_preparing: self.no_preparing,
-        })
-    }
-}
-
-pub struct Transaction<'a> {
-    base: deadpool_postgres::Transaction<'a>,
-    no_preparing: bool,
-}
-
-impl<'a> Transaction<'a> {
-    pub async fn execute<P: StatementParams>(
-        &mut self,
-        params: &P,
-    ) -> Result<P::Result, tokio_postgres::Error> {
-        let params = params.encode_params();
-        let rows = if self.no_preparing {
-            self.base.query(P::SQL, params.as_ref()).await?
-        } else {
-            let prepared = self
-                .base
-                .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
-                .await?;
-            self.base.query(&prepared, params.as_ref()).await?
-        };
-        P::decode_result(rows)
-    }
-}
-
-pub struct TransactionBuilder<'a> {
-    base: deadpool_postgres::TransactionBuilder<'a>,
-    no_preparing: bool,
-}
-
-impl<'a> TransactionBuilder<'a> {
-    pub fn isolation_level(mut self, level: tokio_postgres::IsolationLevel) -> Self {
-        self.base = self.base.isolation_level(level);
-        self
-    }
-
-    pub fn read_only(mut self, read_only: bool) -> Self {
-        self.base = self.base.read_only(read_only);
-        self
-    }
-
-    pub fn deferrable(mut self, deferrable: bool) -> Self {
-        self.base = self.base.deferrable(deferrable);
-        self
-    }
-
-    pub async fn start(self) -> Result<Transaction<'a>, deadpool_postgres::PoolError> {
-        Ok(Transaction {
-            base: self.base.start().await?,
-            no_preparing: self.no_preparing,
-        })
+        P::decode_result(rows, affected_rows)
     }
 }
 
@@ -147,4 +104,137 @@ impl Pool {
             no_preparing: self.no_preparing,
         })
     }
+
+    /// Execute a statement directly on the pool, acquiring and releasing a
+    /// connection automatically.
+    pub async fn execute<P: Statement>(&self, params: &P) -> Result<P::Result, Error> {
+        let session = self.session().await.map_err(Error::Deadpool)?;
+        session.execute(params).await.map_err(Error::Postgres)
+    }
+    /// Execute a transaction, retrying if it aborts due to a serialization failure or deadlock.
+    pub async fn transact_retrying<T: Transaction>(
+        &self,
+        transaction: T,
+    ) -> Result<T::Result, Error> {
+        let mut client = self.base.get().await.map_err(Error::Deadpool)?;
+        let isolation_level = match T::ISOLATION_LEVEL {
+            IsolationLevel::ReadCommitted => tokio_postgres::IsolationLevel::ReadCommitted,
+            IsolationLevel::RepeatableRead => tokio_postgres::IsolationLevel::RepeatableRead,
+            IsolationLevel::Serializable => tokio_postgres::IsolationLevel::Serializable,
+        };
+        loop {
+            let base_transaction = client
+                .build_transaction()
+                .deferrable(T::DEFERRABLE)
+                .read_only(T::READ_ONLY)
+                .isolation_level(isolation_level)
+                .start()
+                .await
+                .map_err(Error::Postgres)?;
+
+            let context = TransactionContext {
+                base: base_transaction,
+                no_preparing: self.no_preparing,
+            };
+
+            let (result, commit) = match transaction.run(&context).await {
+                Ok(ok) => ok,
+                Err(err) => {
+                    // Always rollback before deciding what to do next, even on an
+                    // aborted transaction (Postgres accepts ROLLBACK in error state).
+                    context.base.rollback().await.map_err(Error::Postgres)?;
+
+                    let is_retryable = err.code().is_some_and(|c| {
+                        *c == tokio_postgres::error::SqlState::T_R_SERIALIZATION_FAILURE
+                            || *c == tokio_postgres::error::SqlState::T_R_DEADLOCK_DETECTED
+                    });
+
+                    if is_retryable {
+                        // No delay here; callers that need backoff should wrap this.
+                        continue;
+                    } else {
+                        return Err(Error::Postgres(err));
+                    }
+                }
+            };
+
+            if commit {
+                context.base.commit().await.map_err(Error::Postgres)?;
+            } else {
+                context.base.rollback().await.map_err(Error::Postgres)?;
+            }
+
+            return Ok(result);
+        }
+    }
+}
+
+pub trait Transaction {
+    const DEFERRABLE: bool = false;
+    const READ_ONLY: bool = false;
+    const ISOLATION_LEVEL: IsolationLevel = IsolationLevel::ReadCommitted;
+    type Result;
+    fn run(
+        &self,
+        context: &TransactionContext,
+    ) -> impl std::future::Future<Output = Result<(Self::Result, bool), tokio_postgres::Error>> + Send;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum IsolationLevel {
+    /// An individual statement in the transaction will see rows committed before it began.
+    ReadCommitted,
+
+    /// All statements in the transaction will see the same view of rows committed before the first query in the
+    /// transaction.
+    RepeatableRead,
+
+    /// The reads and writes in this transaction must be able to be committed as an atomic "unit" with respect to reads
+    /// and writes of all other concurrent serializable transactions without interleaving.
+    Serializable,
+}
+
+pub struct TransactionContext<'a> {
+    base: deadpool_postgres::Transaction<'a>,
+    no_preparing: bool,
+}
+
+impl<'a> TransactionContext<'a> {
+    pub async fn execute<P: Statement>(
+        &self,
+        params: &P,
+    ) -> Result<P::Result, tokio_postgres::Error> {
+        let params = params.encode_params();
+        let (rows, affected_rows) = if P::RETURNS_ROWS {
+            let rows = if self.no_preparing {
+                self.base.query(P::SQL, params.as_ref()).await?
+            } else {
+                let prepared = self
+                    .base
+                    .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
+                    .await?;
+                self.base.query(&prepared, params.as_ref()).await?
+            };
+            let affected = rows.len() as u64;
+            (rows, affected)
+        } else {
+            let affected = if self.no_preparing {
+                self.base.execute(P::SQL, params.as_ref()).await?
+            } else {
+                let prepared = self
+                    .base
+                    .prepare_typed_cached(P::SQL, P::PARAM_TYPES)
+                    .await?;
+                self.base.execute(&prepared, params.as_ref()).await?
+            };
+            (vec![], affected)
+        };
+        P::decode_result(rows, affected_rows)
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Deadpool(deadpool_postgres::PoolError),
+    Postgres(tokio_postgres::Error),
 }

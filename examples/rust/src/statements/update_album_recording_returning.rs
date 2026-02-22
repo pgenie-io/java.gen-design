@@ -44,8 +44,10 @@ pub struct OutputRow {
     pub recording: Option<RecordingInfo>,
 }
 
-impl crate::StatementParams for Input {
+impl crate::Statement for Input {
     type Result = Output;
+
+    const RETURNS_ROWS: bool = true;
 
     const SQL: &str = "-- Update album recording information\n\
                        update album\n\
@@ -64,6 +66,7 @@ impl crate::StatementParams for Input {
 
     fn decode_result(
         rows: Vec<tokio_postgres::Row>,
+        _affected_rows: u64,
     ) -> Result<Self::Result, tokio_postgres::Error> {
         rows.iter()
             .map(|row| {

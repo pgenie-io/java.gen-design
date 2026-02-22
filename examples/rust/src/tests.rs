@@ -1,3 +1,8 @@
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
+
 use chrono::NaiveDate;
 use testcontainers::runners::AsyncRunner as _;
 use testcontainers_modules::postgres::Postgres;
@@ -9,7 +14,7 @@ use crate::{
         update_album_recording_returning, update_album_released,
     },
     types::{AlbumFormat, RecordingInfo},
-    Pool,
+    Error, Pool, Statement, Transaction, TransactionContext,
 };
 
 /// Migrations embedded at compile time, sorted by filename.
@@ -378,13 +383,15 @@ async fn update_album_released_updates_row() {
 
     let release_date = NaiveDate::from_ymd_opt(1979, 11, 30).unwrap();
 
-    let _ = session
+    let affected = session
         .execute(&update_album_released::Input {
             released: Some(release_date),
             id: Some(inserted.id),
         })
         .await
         .expect("update_album_released failed");
+
+    assert_eq!(affected, 1, "expected 1 row to be updated");
 
     // Verify via update_album_recording_returning (returns full row).
     let rows = session
@@ -412,5 +419,203 @@ async fn update_album_released_no_match_is_noop() {
         .await
         .expect("update_album_released no-match failed");
 
-    let _ = affected; // 0 rows affected is fine
+    assert_eq!(affected, 0, "expected 0 rows affected for non-existent id");
+}
+
+// ---------------------------------------------------------------------------
+// Pool::execute shorthand
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn pool_execute_inserts_album() {
+    let (pool, _container) = setup_pool().await;
+
+    let result = pool
+        .execute(&insert_album::Input {
+            name: "Animals".to_string(),
+            released: Some(NaiveDate::from_ymd_opt(1977, 1, 23).unwrap()),
+            format: Some(AlbumFormat::Vinyl),
+            recording: None,
+        })
+        .await
+        .expect("pool.execute failed");
+
+    assert!(result.id > 0, "expected a positive id, got {}", result.id);
+}
+
+// ---------------------------------------------------------------------------
+// Transaction trait helpers
+// ---------------------------------------------------------------------------
+
+/// [Statement] that raises a serialisation-failure (code `40001`) via a DO block.
+/// When executed inside a transaction it forces the transaction to error with a
+/// retriable code.
+struct RaiseSerializationFailure;
+
+impl Statement for RaiseSerializationFailure {
+    type Result = ();
+    const RETURNS_ROWS: bool = false;
+    const SQL: &str = "DO $$ BEGIN RAISE EXCEPTION 'simulated' USING ERRCODE = '40001'; END $$";
+    const PARAM_TYPES: &'static [tokio_postgres::types::Type] = &[];
+    #[allow(refining_impl_trait)]
+    fn encode_params(
+        &self,
+    ) -> [&(dyn tokio_postgres::types::ToSql + Sync); Self::PARAM_TYPES.len()] {
+        []
+    }
+    fn decode_result(_: Vec<tokio_postgres::Row>, _: u64) -> Result<(), tokio_postgres::Error> {
+        Ok(())
+    }
+}
+
+/// [Statement] that raises a generic PL/pgSQL exception (code `P0001`).
+/// Used to produce a non-retriable error inside a transaction.
+struct RaiseGenericError;
+
+impl Statement for RaiseGenericError {
+    type Result = ();
+    const RETURNS_ROWS: bool = false;
+    const SQL: &str = "DO $$ BEGIN RAISE EXCEPTION 'generic error'; END $$";
+    const PARAM_TYPES: &'static [tokio_postgres::types::Type] = &[];
+    #[allow(refining_impl_trait)]
+    fn encode_params(
+        &self,
+    ) -> [&(dyn tokio_postgres::types::ToSql + Sync); Self::PARAM_TYPES.len()] {
+        []
+    }
+    fn decode_result(_: Vec<tokio_postgres::Row>, _: u64) -> Result<(), tokio_postgres::Error> {
+        Ok(())
+    }
+}
+
+// ---------------------------------------------------------------------------
+// transact_retrying: commit path
+// ---------------------------------------------------------------------------
+
+struct CommitTransaction {
+    name: String,
+}
+
+impl Transaction for CommitTransaction {
+    type Result = i64;
+
+    async fn run(
+        &self,
+        ctx: &TransactionContext<'_>,
+    ) -> Result<(i64, bool), tokio_postgres::Error> {
+        let result = ctx
+            .execute(&insert_album::Input {
+                name: self.name.clone(),
+                released: None,
+                format: None,
+                recording: None,
+            })
+            .await?;
+        Ok((result.id, true))
+    }
+}
+
+#[tokio::test]
+async fn transact_commit_inserts_album() {
+    let (pool, _container) = setup_pool().await;
+
+    let id = pool
+        .transact_retrying(CommitTransaction {
+            name: "Committed Album".to_string(),
+        })
+        .await
+        .expect("transaction failed");
+
+    assert!(id > 0, "expected positive id, got {id}");
+
+    // Verify the insertion was actually persisted.
+    let session = pool.session().await.expect("session");
+    let rows = session
+        .execute(&update_album_recording_returning::Input {
+            recording: None,
+            id: Some(id),
+        })
+        .await
+        .expect("read-back failed");
+    assert_eq!(rows.len(), 1, "album should exist after commit");
+    assert_eq!(rows[0].name, "Committed Album");
+}
+
+// ---------------------------------------------------------------------------
+// transact_retrying: retry on serialization failure (code 40001)
+// ---------------------------------------------------------------------------
+
+struct RetryOnSerializationFailure {
+    attempt: Arc<AtomicUsize>,
+}
+
+impl Transaction for RetryOnSerializationFailure {
+    type Result = i64;
+
+    async fn run(
+        &self,
+        ctx: &TransactionContext<'_>,
+    ) -> Result<(i64, bool), tokio_postgres::Error> {
+        if self.attempt.fetch_add(1, Ordering::SeqCst) == 0 {
+            // First attempt: raise a serialization failure so the runner retries.
+            ctx.execute(&RaiseSerializationFailure).await?;
+            unreachable!("execute should have returned Err");
+        }
+        let result = ctx
+            .execute(&insert_album::Input {
+                name: "Retried Album".to_string(),
+                released: None,
+                format: None,
+                recording: None,
+            })
+            .await?;
+        Ok((result.id, true))
+    }
+}
+
+#[tokio::test]
+async fn transact_retries_on_serialization_failure() {
+    let (pool, _container) = setup_pool().await;
+
+    let counter = Arc::new(AtomicUsize::new(0));
+    let id = pool
+        .transact_retrying(RetryOnSerializationFailure {
+            attempt: counter.clone(),
+        })
+        .await
+        .expect("should succeed on second attempt");
+
+    assert!(id > 0);
+    assert_eq!(
+        counter.load(Ordering::SeqCst),
+        2,
+        "expected exactly 2 attempts"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// transact_retrying: non-retriable error propagates
+// ---------------------------------------------------------------------------
+
+struct NonRetryableErrorTransaction;
+
+impl Transaction for NonRetryableErrorTransaction {
+    type Result = ();
+
+    async fn run(&self, ctx: &TransactionContext<'_>) -> Result<((), bool), tokio_postgres::Error> {
+        ctx.execute(&RaiseGenericError).await?;
+        unreachable!("execute should have returned Err");
+    }
+}
+
+#[tokio::test]
+async fn transact_non_retryable_error_propagates() {
+    let (pool, _container) = setup_pool().await;
+
+    let result = pool.transact_retrying(NonRetryableErrorTransaction).await;
+
+    assert!(
+        matches!(result, Err(Error::Postgres(_))),
+        "expected Err(Error::Postgres(_)), got {result:?}"
+    );
 }

@@ -38,8 +38,10 @@ pub struct OutputRow {
     pub id: i64,
 }
 
-impl crate::StatementParams for Input {
+impl crate::Statement for Input {
     type Result = Output;
+
+    const RETURNS_ROWS: bool = true;
 
     const SQL: &str = "insert into album (name, released, format, recording)\n\
                        values ($1, $2, $3::album_format, $4::recording_info)\n\
@@ -57,6 +59,7 @@ impl crate::StatementParams for Input {
 
     fn decode_result(
         mut rows: Vec<tokio_postgres::Row>,
+        _affected_rows: u64,
     ) -> Result<Self::Result, tokio_postgres::Error> {
         let row = rows.remove(0);
         Ok(OutputRow {
