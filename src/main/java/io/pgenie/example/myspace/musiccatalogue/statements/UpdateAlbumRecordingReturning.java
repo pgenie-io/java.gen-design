@@ -34,8 +34,45 @@ import java.util.List;
  * @param recording Maps to {@code $recording} in the template. Nullable.
  * @param id        Maps to {@code $id} in the template. Nullable.
  */
-public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
+public final class UpdateAlbumRecordingReturning
         implements Statement<UpdateAlbumRecordingReturning.Output> {
+
+    private final RecordingInfo recording;
+    private final Long id;
+
+    public UpdateAlbumRecordingReturning(RecordingInfo recording, Long id) {
+        this.recording = recording;
+        this.id = id;
+    }
+
+    public RecordingInfo recording() {
+        return recording;
+    }
+
+    public Long id() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UpdateAlbumRecordingReturning)) return false;
+        UpdateAlbumRecordingReturning that = (UpdateAlbumRecordingReturning) o;
+        return java.util.Objects.equals(recording, that.recording) &&
+                java.util.Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(recording, id);
+    }
+
+    @Override
+    public String toString() {
+        return "UpdateAlbumRecordingReturning[recording=" + recording +
+                ", id=" + id + "]";
+    }
+
 
     // -------------------------------------------------------------------------
     // Result type
@@ -49,18 +86,60 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
     }
 
     /** Row of {@link Output}. */
-    public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
-            long id,
-            /** Maps to the {@code name} result-set column. */
-            String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
-            LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
-            AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
-            RecordingInfo recording
-    ) {}
+    public static final class OutputRow {
+
+        private final long id;
+        private final String name;
+        private final LocalDate released;
+        private final AlbumFormat format;
+        private final RecordingInfo recording;
+
+        OutputRow(long id, String name, LocalDate released, AlbumFormat format, RecordingInfo recording) {
+            this.id = id;
+            this.name = name;
+            this.released = released;
+            this.format = format;
+            this.recording = recording;
+        }
+
+        /** Maps to the {@code id} result-set column. */
+        public long id() { return id; }
+        /** Maps to the {@code name} result-set column. */
+        public String name() { return name; }
+        /** Maps to the {@code released} result-set column. Nullable. */
+        public LocalDate released() { return released; }
+        /** Maps to the {@code format} result-set column. Nullable. */
+        public AlbumFormat format() { return format; }
+        /** Maps to the {@code recording} result-set column. Nullable. */
+        public RecordingInfo recording() { return recording; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof OutputRow)) return false;
+            OutputRow that = (OutputRow) o;
+            return id == that.id &&
+                    java.util.Objects.equals(name, that.name) &&
+                    java.util.Objects.equals(released, that.released) &&
+                    java.util.Objects.equals(format, that.format) &&
+                    java.util.Objects.equals(recording, that.recording);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(id, name, released, format, recording);
+        }
+
+        @Override
+        public String toString() {
+            return "OutputRow[id=" + id +
+                    ", name=" + name +
+                    ", released=" + released +
+                    ", format=" + format +
+                    ", recording=" + recording + "]";
+        }
+    }
+
 
     // -------------------------------------------------------------------------
     // Statement implementation

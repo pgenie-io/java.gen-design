@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Representation of the {@code recording_info} user-declared PostgreSQL
@@ -21,12 +22,64 @@ import java.util.List;
  * @param country      Maps to {@code country}.
  * @param recordedDate Maps to {@code recorded_date}.
  */
-public record RecordingInfo(
-        String studioName,
-        String city,
-        String country,
-        LocalDate recordedDate
-) {
+public final class RecordingInfo {
+
+    private final String studioName;
+    private final String city;
+    private final String country;
+    private final LocalDate recordedDate;
+
+    public RecordingInfo(
+            String studioName,
+            String city,
+            String country,
+            LocalDate recordedDate) {
+        this.studioName = studioName;
+        this.city = city;
+        this.country = country;
+        this.recordedDate = recordedDate;
+    }
+
+    public String studioName() {
+        return studioName;
+    }
+
+    public String city() {
+        return city;
+    }
+
+    public String country() {
+        return country;
+    }
+
+    public LocalDate recordedDate() {
+        return recordedDate;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof RecordingInfo)) return false;
+        RecordingInfo that = (RecordingInfo) o;
+        return Objects.equals(studioName, that.studioName) &&
+                Objects.equals(city, that.city) &&
+                Objects.equals(country, that.country) &&
+                Objects.equals(recordedDate, that.recordedDate);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(studioName, city, country, recordedDate);
+    }
+
+    @Override
+    public String toString() {
+        return "RecordingInfo[studioName=" + studioName +
+                ", city=" + city +
+                ", country=" + country +
+                ", recordedDate=" + recordedDate + "]";
+    }
+
 
     /**
      * Encode this record as a PostgreSQL composite literal string, e.g.

@@ -29,8 +29,36 @@ import java.util.List;
  *
  * @param artist Maps to {@code $artist} in the template. Nullable.
  */
-public record SelectGenreByArtist(Integer artist)
-        implements Statement<SelectGenreByArtist.Output> {
+public final class SelectGenreByArtist implements Statement<SelectGenreByArtist.Output> {
+
+    private final Integer artist;
+
+    public SelectGenreByArtist(Integer artist) {
+        this.artist = artist;
+    }
+
+    public Integer artist() {
+        return artist;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SelectGenreByArtist)) return false;
+        SelectGenreByArtist that = (SelectGenreByArtist) o;
+        return java.util.Objects.equals(artist, that.artist);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(artist);
+    }
+
+    @Override
+    public String toString() {
+        return "SelectGenreByArtist[artist=" + artist + "]";
+    }
+
 
     // -------------------------------------------------------------------------
     // Result type
@@ -44,12 +72,40 @@ public record SelectGenreByArtist(Integer artist)
     }
 
     /** Row of {@link Output}. */
-    public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
-            int id,
-            /** Maps to the {@code name} result-set column. */
-            String name
-    ) {}
+    public static final class OutputRow {
+
+        private final int id;
+        private final String name;
+
+        OutputRow(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        /** Maps to the {@code id} result-set column. */
+        public int id() { return id; }
+        /** Maps to the {@code name} result-set column. */
+        public String name() { return name; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof OutputRow)) return false;
+            OutputRow that = (OutputRow) o;
+            return id == that.id && java.util.Objects.equals(name, that.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(id, name);
+        }
+
+        @Override
+        public String toString() {
+            return "OutputRow[id=" + id + ", name=" + name + "]";
+        }
+    }
+
 
     // -------------------------------------------------------------------------
     // Statement implementation

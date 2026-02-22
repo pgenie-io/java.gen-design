@@ -27,8 +27,43 @@ import java.time.LocalDate;
  * @param released Maps to {@code $released} in the template. Nullable.
  * @param id       Maps to {@code $id} in the template. Nullable.
  */
-public record UpdateAlbumReleased(LocalDate released, Long id)
-        implements Statement<Long> {
+public final class UpdateAlbumReleased implements Statement<Long> {
+
+    private final LocalDate released;
+    private final Long id;
+
+    public UpdateAlbumReleased(LocalDate released, Long id) {
+        this.released = released;
+        this.id = id;
+    }
+
+    public LocalDate released() {
+        return released;
+    }
+
+    public Long id() {
+        return id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UpdateAlbumReleased)) return false;
+        UpdateAlbumReleased that = (UpdateAlbumReleased) o;
+        return java.util.Objects.equals(released, that.released) &&
+                java.util.Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(released, id);
+    }
+
+    @Override
+    public String toString() {
+        return "UpdateAlbumReleased[released=" + released + ", id=" + id + "]";
+    }
+
 
     // -------------------------------------------------------------------------
     // Statement implementation
