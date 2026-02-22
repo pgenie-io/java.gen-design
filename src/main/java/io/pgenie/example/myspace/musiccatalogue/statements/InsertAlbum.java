@@ -32,22 +32,96 @@ import java.time.LocalDate;
  * @param format    Maps to {@code $format} in the template. Nullable.
  * @param recording Maps to {@code $recording} in the template. Nullable.
  */
-public record InsertAlbum(
-            String name,
-            LocalDate released,
-            AlbumFormat format,
-            RecordingInfo recording
-    ) implements Statement<InsertAlbum.Output> {
+public final class InsertAlbum implements Statement<InsertAlbum.Output> {
+
+    private final String name;
+    private final LocalDate released;
+    private final AlbumFormat format;
+    private final RecordingInfo recording;
+
+    public InsertAlbum(String name, LocalDate released, AlbumFormat format, RecordingInfo recording) {
+        this.name = name;
+        this.released = released;
+        this.format = format;
+        this.recording = recording;
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public LocalDate released() {
+        return released;
+    }
+
+    public AlbumFormat format() {
+        return format;
+    }
+
+    public RecordingInfo recording() {
+        return recording;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof InsertAlbum)) return false;
+        InsertAlbum that = (InsertAlbum) o;
+        return java.util.Objects.equals(name, that.name) &&
+                java.util.Objects.equals(released, that.released) &&
+                java.util.Objects.equals(format, that.format) &&
+                java.util.Objects.equals(recording, that.recording);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(name, released, format, recording);
+    }
+
+    @Override
+    public String toString() {
+        return "InsertAlbum[name=" + name +
+                ", released=" + released +
+                ", format=" + format +
+                ", recording=" + recording + "]";
+    }
 
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
 
     /** Result of the statement parameterised by {@link Input}. */
-    public record Output(
-            /** Maps to the {@code id} result-set column. */
-            long id
-    ) {}
+    public static final class Output {
+
+        private final long id;
+
+        Output(long id) {
+            this.id = id;
+        }
+
+        /** Maps to the {@code id} result-set column. */
+        public long id() {
+            return id;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof Output)) return false;
+            Output that = (Output) o;
+            return id == that.id;
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(id);
+        }
+
+        @Override
+        public String toString() {
+            return "Output[id=" + id + "]";
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Statement implementation

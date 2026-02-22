@@ -35,8 +35,36 @@ import java.util.List;
  *
  * @param format Maps to {@code $format} in the template. Nullable.
  */
-public record SelectAlbumByFormat(AlbumFormat format)
-        implements Statement<SelectAlbumByFormat.Output> {
+public final class SelectAlbumByFormat implements Statement<SelectAlbumByFormat.Output> {
+
+    private final AlbumFormat format;
+
+    public SelectAlbumByFormat(AlbumFormat format) {
+        this.format = format;
+    }
+
+    public AlbumFormat format() {
+        return format;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SelectAlbumByFormat)) return false;
+        SelectAlbumByFormat that = (SelectAlbumByFormat) o;
+        return java.util.Objects.equals(format, that.format);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(format);
+    }
+
+    @Override
+    public String toString() {
+        return "SelectAlbumByFormat[format=" + format + "]";
+    }
+
 
     // -------------------------------------------------------------------------
     // Result type
@@ -50,18 +78,60 @@ public record SelectAlbumByFormat(AlbumFormat format)
     }
 
     /** Row of {@link Output}. */
-    public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
-            long id,
-            /** Maps to the {@code name} result-set column. */
-            String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
-            LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
-            AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
-            RecordingInfo recording
-    ) {}
+    public static final class OutputRow {
+
+        private final long id;
+        private final String name;
+        private final LocalDate released;
+        private final AlbumFormat format;
+        private final RecordingInfo recording;
+
+        OutputRow(long id, String name, LocalDate released, AlbumFormat format, RecordingInfo recording) {
+            this.id = id;
+            this.name = name;
+            this.released = released;
+            this.format = format;
+            this.recording = recording;
+        }
+
+        /** Maps to the {@code id} result-set column. */
+        public long id() { return id; }
+        /** Maps to the {@code name} result-set column. */
+        public String name() { return name; }
+        /** Maps to the {@code released} result-set column. Nullable. */
+        public LocalDate released() { return released; }
+        /** Maps to the {@code format} result-set column. Nullable. */
+        public AlbumFormat format() { return format; }
+        /** Maps to the {@code recording} result-set column. Nullable. */
+        public RecordingInfo recording() { return recording; }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof OutputRow)) return false;
+            OutputRow that = (OutputRow) o;
+            return id == that.id &&
+                    java.util.Objects.equals(name, that.name) &&
+                    java.util.Objects.equals(released, that.released) &&
+                    java.util.Objects.equals(format, that.format) &&
+                    java.util.Objects.equals(recording, that.recording);
+        }
+
+        @Override
+        public int hashCode() {
+            return java.util.Objects.hash(id, name, released, format, recording);
+        }
+
+        @Override
+        public String toString() {
+            return "OutputRow[id=" + id +
+                    ", name=" + name +
+                    ", released=" + released +
+                    ", format=" + format +
+                    ", recording=" + recording + "]";
+        }
+    }
+
 
     // -------------------------------------------------------------------------
     // Statement implementation
