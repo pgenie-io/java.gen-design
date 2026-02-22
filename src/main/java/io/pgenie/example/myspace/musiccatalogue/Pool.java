@@ -4,14 +4,15 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
  * Connection pool for the music-catalogue database.
  *
- * <p>Wraps a {@link HikariDataSource} and vends {@link Session} objects that
- * hold a single pooled {@link java.sql.Connection}. The pool must be
- * {@link #close() closed} when the application shuts down.
+ * <p>Wraps a {@link HikariDataSource} and executes {@link Statement}s against
+ * pooled connections. The pool must be {@link #close() closed} when the
+ * application shuts down.
  */
 public final class Pool implements AutoCloseable {
 
@@ -34,27 +35,30 @@ public final class Pool implements AutoCloseable {
     }
 
     /**
-     * Acquire a {@link Session} backed by a pooled connection.
+     * Execute a {@link Statement} and return its decoded result.
      *
-     * <p>The caller is responsible for closing the session (which returns the
-     * connection to the pool). Use try-with-resources:
-     * <pre>{@code
-     * try (Session session = pool.session()) {
-     *     var result = session.execute(new InsertAlbum("name", ...));
-     * }
-     * }</pre>
-     */
-    public Session session() throws SQLException {
-        return new Session(dataSource.getConnection());
-    }
-
-    /**
-     * Execute a statement directly on the pool, acquiring and releasing a
-     * connection automatically.
+     * <p>The statement is prepared, its parameters are bound, it is executed,
+     * and the result is decoded — all within this call.
+     *
+     * <p>When {@link Statement#returnsRows()} is {@code true} the statement is
+     * run with {@link PreparedStatement#execute()} so the result set is
+     * accessible via {@link PreparedStatement#getResultSet()}.  Otherwise
+     * {@link PreparedStatement#executeUpdate()} is used and the affected-row
+     * count is forwarded to {@link Statement#decodeResult}.
      */
     public <R> R execute(Statement<R> stmt) throws SQLException {
-        try (Session session = session()) {
-            return session.execute(stmt);
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
+            stmt.bindParams(ps);
+            long affectedRows;
+            if (stmt.returnsRows()) {
+                ps.execute();
+                affectedRows = 0;
+            } else {
+                affectedRows = ps.executeUpdate();
+            }
+            return stmt.decodeResult(ps, affectedRows);
         }
     }
 

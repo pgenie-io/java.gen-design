@@ -24,7 +24,7 @@ public final class TransactionContext {
      * its decoded result.
      *
      * <p>Follows the same {@link Statement#returnsRows()} branching as
-     * {@link Session#execute}: row-returning statements use
+     * {@link Pool#execute}: row-returning statements use
      * {@link PreparedStatement#execute()}, DML statements use
      * {@link PreparedStatement#executeUpdate()} and forward the affected-row
      * count to {@link Statement#decodeResult}.
