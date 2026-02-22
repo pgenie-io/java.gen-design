@@ -22,6 +22,7 @@
 !/.github/
 !/src/
 !/migrations/
+!/examples/
 
 # Ignore noise:
 .DS_Store
