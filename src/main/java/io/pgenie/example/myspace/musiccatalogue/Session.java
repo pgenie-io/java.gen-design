@@ -29,33 +29,25 @@ public final class Session implements AutoCloseable {
      *
      * <p>The statement is prepared, its parameters are bound, it is executed,
      * and the result is decoded — all within this call.
+     *
+     * <p>When {@link Statement#returnsRows()} is {@code true} the statement is
+     * run with {@link PreparedStatement#execute()} so the result set is
+     * accessible via {@link PreparedStatement#getResultSet()}.  Otherwise
+     * {@link PreparedStatement#executeUpdate()} is used and the affected-row
+     * count is forwarded to {@link Statement#decodeResult}.
      */
     public <R> R execute(Statement<R> stmt) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
             stmt.bindParams(ps);
-            ps.execute();
-            return stmt.decodeResult(ps);
+            long affectedRows;
+            if (stmt.returnsRows()) {
+                ps.execute();
+                affectedRows = 0;
+            } else {
+                affectedRows = ps.executeUpdate();
+            }
+            return stmt.decodeResult(ps, affectedRows);
         }
-    }
-
-    /**
-     * Begin an explicit transaction on this session's connection.
-     *
-     * <p>Sets auto-commit to {@code false}. The returned {@link Transaction}
-     * must be committed or rolled back (closing it without committing will
-     * roll back automatically).
-     */
-    public Transaction transaction() throws SQLException {
-        conn.setAutoCommit(false);
-        return new Transaction(conn);
-    }
-
-    /**
-     * Return a {@link TransactionBuilder} for configuring transaction
-     * characteristics before starting.
-     */
-    public TransactionBuilder buildTransaction() {
-        return new TransactionBuilder(conn);
     }
 
     /** Return the connection to the pool. */

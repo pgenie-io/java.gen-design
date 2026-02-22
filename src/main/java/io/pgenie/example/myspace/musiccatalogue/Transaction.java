@@ -1,69 +1,50 @@
 package io.pgenie.example.myspace.musiccatalogue;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 /**
- * An explicit database transaction.
+ * User-defined transaction logic executed by {@link Pool#transact}.
  *
- * <p>Obtained via {@link Session#transaction()} or
- * {@link TransactionBuilder#start()}. Closing the transaction without first
- * calling {@link #commit()} rolls back automatically and restores
- * auto-commit mode on the underlying connection.
+ * <p>Implement this interface to define a unit of work that runs inside a
+ * database transaction.  The {@link #run} method receives a
+ * {@link TransactionContext} for executing statements and returns a
+ * {@link TransactionOutcome} that carries both the result and a
+ * commit-or-rollback decision.
  *
- * <pre>{@code
- * try (Transaction tx = session.transaction()) {
- *     tx.execute(new InsertAlbum("name", ...));
- *     tx.commit();
- * }
- * }</pre>
+ * <p>Override {@link #isolationLevel()}, {@link #readOnly()}, or
+ * {@link #deferrable()} to customise transaction characteristics.  The
+ * defaults mirror PostgreSQL's session defaults ({@code READ COMMITTED},
+ * read-write, non-deferrable).
+ *
+ * @param <R> the result type produced by the transaction
  */
-public final class Transaction implements AutoCloseable {
+public interface Transaction<R> {
 
-    private final Connection conn;
-    private boolean done = false;
+    /** Isolation level for the transaction. Defaults to {@link IsolationLevel#READ_COMMITTED}. */
+    default IsolationLevel isolationLevel() {
+        return IsolationLevel.READ_COMMITTED;
+    }
 
-    Transaction(Connection conn) {
-        this.conn = conn;
+    /** Whether the transaction is read-only. Defaults to {@code false}. */
+    default boolean readOnly() {
+        return false;
     }
 
     /**
-     * Execute a {@link Statement} within this transaction and return its
-     * decoded result.
+     * Whether the transaction is deferrable (only meaningful for
+     * {@code SERIALIZABLE} read-only transactions). Defaults to {@code false}.
      */
-    public <R> R execute(Statement<R> stmt) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
-            stmt.bindParams(ps);
-            ps.execute();
-            return stmt.decodeResult(ps);
-        }
-    }
-
-    /** Commit all work done in this transaction. */
-    public void commit() throws SQLException {
-        conn.commit();
-        done = true;
-    }
-
-    /** Explicitly roll back all work done in this transaction. */
-    public void rollback() throws SQLException {
-        conn.rollback();
-        done = true;
+    default boolean deferrable() {
+        return false;
     }
 
     /**
-     * Roll back if not already committed or rolled back, then restore
-     * auto-commit mode.
+     * Execute the transaction body using {@code ctx} and return a
+     * {@link TransactionOutcome} indicating the result and whether to commit.
+     *
+     * <p>Throw {@link SQLException} to signal a failure; {@link Pool#transact}
+     * will roll back and, if the error is a serialisation failure (SQLState
+     * {@code 40001}) or deadlock (SQLState {@code 40P01}), automatically retry.
      */
-    @Override
-    public void close() throws SQLException {
-        try {
-            if (!done) {
-                conn.rollback();
-            }
-        } finally {
-            conn.setAutoCommit(true);
-        }
-    }
+    TransactionOutcome<R> run(TransactionContext ctx) throws SQLException;
 }

@@ -33,15 +33,29 @@ public interface Statement<R> {
     void bindParams(PreparedStatement ps) throws SQLException;
 
     /**
-     * Decode the result of the statement after {@link PreparedStatement#execute()}
-     * has been called.
+     * Whether this statement returns rows (i.e. is a {@code SELECT} or
+     * contains a {@code RETURNING} clause).
+     *
+     * <p>When {@code true} the execution functions use
+     * {@link PreparedStatement#execute()} so that the result set is available
+     * via {@link PreparedStatement#getResultSet()}.  When {@code false} they
+     * use {@link PreparedStatement#executeUpdate()} instead, which returns the
+     * actual number of rows affected by the statement.
+     */
+    boolean returnsRows();
+
+    /**
+     * Decode the result of the statement after execution.
      *
      * <ul>
      *   <li>Query statements (SELECT / UPDATE … RETURNING) read
      *       {@link PreparedStatement#getResultSet()}.</li>
-     *   <li>DML statements without a returning clause read
-     *       {@link PreparedStatement#getUpdateCount()}.</li>
+     *   <li>DML statements without a returning clause use
+     *       {@code affectedRows} directly.</li>
      * </ul>
+     *
+     * @param affectedRows the number of rows affected; for row-returning
+     *                     statements this is {@code 0} and may be ignored.
      */
-    R decodeResult(PreparedStatement ps) throws SQLException;
+    R decodeResult(PreparedStatement ps, long affectedRows) throws SQLException;
 }
