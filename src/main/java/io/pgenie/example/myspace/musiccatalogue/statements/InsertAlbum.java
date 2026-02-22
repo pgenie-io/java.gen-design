@@ -26,32 +26,18 @@ import java.time.LocalDate;
  *
  * <p>Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
+ * 
+ * @param name      Maps to {@code $name} in the template. Non-null.
+ * @param released  Maps to {@code $released} in the template. Nullable.
+ * @param format    Maps to {@code $format} in the template. Nullable.
+ * @param recording Maps to {@code $recording} in the template. Nullable.
  */
-public final class InsertAlbum implements Statement<InsertAlbum.Input, InsertAlbum.Output> {
-
-    /** Singleton — stateless; safe to share across threads. */
-    public static final InsertAlbum INSTANCE = new InsertAlbum();
-
-    private InsertAlbum() {}
-
-    // -------------------------------------------------------------------------
-    // Parameter type
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parameters for the {@code insert_album} query.
-     *
-     * @param name      Maps to {@code $name} in the template. Non-null.
-     * @param released  Maps to {@code $released} in the template. Nullable.
-     * @param format    Maps to {@code $format} in the template. Nullable.
-     * @param recording Maps to {@code $recording} in the template. Nullable.
-     */
-    public record Input(
+public record InsertAlbum(
             String name,
             LocalDate released,
             AlbumFormat format,
             RecordingInfo recording
-    ) {}
+    ) implements Statement<InsertAlbum.Output> {
 
     // -------------------------------------------------------------------------
     // Result type
@@ -76,15 +62,15 @@ public final class InsertAlbum implements Statement<InsertAlbum.Input, InsertAlb
     }
 
     @Override
-    public void bindParams(PreparedStatement ps, Input p) throws SQLException {
-        ps.setString(1, p.name());
-        if (p.released() != null) {
-            ps.setDate(2, Date.valueOf(p.released()));
+    public void bindParams(PreparedStatement ps) throws SQLException {
+        ps.setString(1, this.name());
+        if (this.released() != null) {
+            ps.setDate(2, Date.valueOf(this.released()));
         } else {
             ps.setNull(2, Types.DATE);
         }
-        ps.setObject(3, AlbumFormat.toPgObject(p.format()));
-        ps.setObject(4, RecordingInfo.toPgObject(p.recording()));
+        ps.setObject(3, AlbumFormat.toPgObject(this.format()));
+        ps.setObject(4, RecordingInfo.toPgObject(this.recording()));
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.sql.SQLException;
  *
  * <pre>{@code
  * try (Session session = pool.session()) {
- *     var result = session.execute(InsertAlbum.INSTANCE, input);
+ *     var result = session.execute(new InsertAlbum("Dark Side of the Moon", ...));
  * }
  * }</pre>
  */
@@ -30,9 +30,9 @@ public final class Session implements AutoCloseable {
      * <p>The statement is prepared, its parameters are bound, it is executed,
      * and the result is decoded — all within this call.
      */
-    public <P, R> R execute(Statement<P, R> stmt, P params) throws SQLException {
+    public <R> R execute(Statement<R> stmt) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
-            stmt.bindParams(ps, params);
+            stmt.bindParams(ps);
             ps.execute();
             return stmt.decodeResult(ps);
         }

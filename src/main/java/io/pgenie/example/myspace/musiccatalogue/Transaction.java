@@ -14,7 +14,7 @@ import java.sql.SQLException;
  *
  * <pre>{@code
  * try (Transaction tx = session.transaction()) {
- *     tx.execute(InsertAlbum.INSTANCE, input);
+ *     tx.execute(new InsertAlbum("name", ...));
  *     tx.commit();
  * }
  * }</pre>
@@ -32,9 +32,9 @@ public final class Transaction implements AutoCloseable {
      * Execute a {@link Statement} within this transaction and return its
      * decoded result.
      */
-    public <P, R> R execute(Statement<P, R> stmt, P params) throws SQLException {
+    public <R> R execute(Statement<R> stmt) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
-            stmt.bindParams(ps, params);
+            stmt.bindParams(ps);
             ps.execute();
             return stmt.decodeResult(ps);
         }

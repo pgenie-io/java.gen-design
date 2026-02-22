@@ -30,36 +30,18 @@ import java.util.List;
  *
  * <p>Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
+ *
+ * @param recording Maps to {@code $recording} in the template. Nullable.
+ * @param id        Maps to {@code $id} in the template. Nullable.
  */
-public final class UpdateAlbumRecordingReturning
-        implements Statement<UpdateAlbumRecordingReturning.Input, UpdateAlbumRecordingReturning.Output> {
-
-    /** Singleton — stateless; safe to share across threads. */
-    public static final UpdateAlbumRecordingReturning INSTANCE =
-            new UpdateAlbumRecordingReturning();
-
-    private UpdateAlbumRecordingReturning() {}
-
-    // -------------------------------------------------------------------------
-    // Parameter type
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parameters for the {@code update_album_recording_returning} query.
-     *
-     * @param recording Maps to {@code $recording} in the template. Nullable.
-     * @param id        Maps to {@code $id} in the template. Nullable.
-     */
-    public record Input(
-            RecordingInfo recording,
-            Long id
-    ) {}
+public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
+        implements Statement<UpdateAlbumRecordingReturning.Output> {
 
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
 
-    /** Result of the statement parameterised by {@link Input}. */
+    /** Result of the statement parameterised by {@link UpdateAlbumRecordingReturning}. */
     public static final class Output extends ArrayList<OutputRow> {
         Output(List<OutputRow> rows) {
             super(rows);
@@ -95,10 +77,10 @@ public final class UpdateAlbumRecordingReturning
     }
 
     @Override
-    public void bindParams(PreparedStatement ps, Input p) throws SQLException {
-        ps.setObject(1, RecordingInfo.toPgObject(p.recording()));
-        if (p.id() != null) {
-            ps.setLong(2, p.id());
+    public void bindParams(PreparedStatement ps) throws SQLException {
+        ps.setObject(1, RecordingInfo.toPgObject(this.recording()));
+        if (this.id() != null) {
+            ps.setLong(2, this.id());
         } else {
             ps.setNull(2, Types.BIGINT);
         }

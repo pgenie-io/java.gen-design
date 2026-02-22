@@ -114,7 +114,7 @@ class StatementsIT {
     @Test
     void insertAlbumReturnsId() throws SQLException {
         try (Session session = pool.session()) {
-            var result = session.execute(InsertAlbum.INSTANCE, new InsertAlbum.Input(
+            var result = session.execute(new InsertAlbum(
                     "Dark Side of the Moon",
                     LocalDate.of(1973, 3, 1),
                     AlbumFormat.VINYL,
@@ -132,7 +132,7 @@ class StatementsIT {
     @Test
     void insertAlbumWithNullsReturnsId() throws SQLException {
         try (Session session = pool.session()) {
-            var result = session.execute(InsertAlbum.INSTANCE, new InsertAlbum.Input(
+            var result = session.execute(new InsertAlbum(
                     "Untitled",
                     null,
                     null,
@@ -155,15 +155,14 @@ class StatementsIT {
                     "USA",
                     LocalDate.of(1976, 8, 1)
             );
-            var inserted = session.execute(InsertAlbum.INSTANCE, new InsertAlbum.Input(
+            var inserted = session.execute(new InsertAlbum(
                     "Rumours",
                     LocalDate.of(1977, 2, 4),
                     AlbumFormat.CD,
                     recording
             ));
 
-            var rows = session.execute(SelectAlbumByFormat.INSTANCE,
-                    new SelectAlbumByFormat.Input(AlbumFormat.CD));
+            var rows = session.execute(new SelectAlbumByFormat(AlbumFormat.CD));
 
             assertTrue(
                     rows.stream().anyMatch(r -> r.id() == inserted.id()),
@@ -182,8 +181,7 @@ class StatementsIT {
     @Test
     void selectAlbumByFormatReturnsEmptyForAbsentFormat() throws SQLException {
         try (Session session = pool.session()) {
-            var rows = session.execute(SelectAlbumByFormat.INSTANCE,
-                    new SelectAlbumByFormat.Input(AlbumFormat.SACD));
+            var rows = session.execute(new SelectAlbumByFormat(AlbumFormat.SACD));
             assertTrue(rows.isEmpty(), "expected no SACD albums in a fresh DB");
         }
     }
@@ -195,8 +193,7 @@ class StatementsIT {
     @Test
     void selectGenreByArtistReturnsEmptyForUnknownArtist() throws SQLException {
         try (Session session = pool.session()) {
-            var rows = session.execute(SelectGenreByArtist.INSTANCE,
-                    new SelectGenreByArtist.Input(9999));
+            var rows = session.execute(new SelectGenreByArtist(9999));
             assertTrue(rows.isEmpty());
         }
     }
@@ -230,8 +227,7 @@ class StatementsIT {
         }
 
         try (Session session = pool.session()) {
-            var rows = session.execute(SelectGenreByArtist.INSTANCE,
-                    new SelectGenreByArtist.Input(artistId));
+            var rows = session.execute(new SelectGenreByArtist(artistId));
             assertEquals(1, rows.size());
             assertEquals("Jazz", rows.get(0).name());
         }
@@ -244,7 +240,7 @@ class StatementsIT {
     @Test
     void updateAlbumRecordingReturningUpdatesAndReturnsRow() throws SQLException {
         try (Session session = pool.session()) {
-            var inserted = session.execute(InsertAlbum.INSTANCE, new InsertAlbum.Input(
+            var inserted = session.execute(new InsertAlbum(
                     "Wish You Were Here",
                     null,
                     null,
@@ -258,8 +254,8 @@ class StatementsIT {
                     LocalDate.of(1975, 1, 6)
             );
 
-            var rows = session.execute(UpdateAlbumRecordingReturning.INSTANCE,
-                    new UpdateAlbumRecordingReturning.Input(recording, inserted.id()));
+            var rows = session.execute(
+                    new UpdateAlbumRecordingReturning(recording, inserted.id()));
 
             assertEquals(1, rows.size());
             assertEquals(inserted.id(), rows.get(0).id());
@@ -271,8 +267,7 @@ class StatementsIT {
     @Test
     void updateAlbumRecordingReturningNoMatchReturnsEmpty() throws SQLException {
         try (Session session = pool.session()) {
-            var rows = session.execute(UpdateAlbumRecordingReturning.INSTANCE,
-                    new UpdateAlbumRecordingReturning.Input(null, 99999L));
+            var rows = session.execute(new UpdateAlbumRecordingReturning(null, 99999L));
             assertTrue(rows.isEmpty());
         }
     }
@@ -284,7 +279,7 @@ class StatementsIT {
     @Test
     void updateAlbumReleasedUpdatesRow() throws SQLException {
         try (Session session = pool.session()) {
-            var inserted = session.execute(InsertAlbum.INSTANCE, new InsertAlbum.Input(
+            var inserted = session.execute(new InsertAlbum(
                     "The Wall",
                     null,
                     null,
@@ -293,12 +288,11 @@ class StatementsIT {
 
             LocalDate releaseDate = LocalDate.of(1979, 11, 30);
 
-            session.execute(UpdateAlbumReleased.INSTANCE,
-                    new UpdateAlbumReleased.Input(releaseDate, inserted.id()));
+            session.execute(new UpdateAlbumReleased(releaseDate, inserted.id()));
 
             // Verify via update_album_recording_returning (returns full row).
-            var rows = session.execute(UpdateAlbumRecordingReturning.INSTANCE,
-                    new UpdateAlbumRecordingReturning.Input(null, inserted.id()));
+            var rows = session.execute(
+                    new UpdateAlbumRecordingReturning(null, inserted.id()));
 
             assertEquals(1, rows.size());
             assertEquals(releaseDate, rows.get(0).released());
@@ -308,11 +302,8 @@ class StatementsIT {
     @Test
     void updateAlbumReleasedNoMatchIsNoop() throws SQLException {
         try (Session session = pool.session()) {
-            long affected = session.execute(UpdateAlbumReleased.INSTANCE,
-                    new UpdateAlbumReleased.Input(
-                            LocalDate.of(2000, 1, 1),
-                            99999L
-                    ));
+            long affected = session.execute(
+                    new UpdateAlbumReleased(LocalDate.of(2000, 1, 1), 99999L));
             // 0 rows affected is fine.
             assertEquals(0L, affected);
         }

@@ -32,31 +32,17 @@ import java.util.List;
  *
  * <p>Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
+ *
+ * @param format Maps to {@code $format} in the template. Nullable.
  */
-public final class SelectAlbumByFormat
-        implements Statement<SelectAlbumByFormat.Input, SelectAlbumByFormat.Output> {
-
-    /** Singleton — stateless; safe to share across threads. */
-    public static final SelectAlbumByFormat INSTANCE = new SelectAlbumByFormat();
-
-    private SelectAlbumByFormat() {}
-
-    // -------------------------------------------------------------------------
-    // Parameter type
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parameters for the {@code select_album_by_format} query.
-     *
-     * @param format Maps to {@code $format} in the template. Nullable.
-     */
-    public record Input(AlbumFormat format) {}
+public record SelectAlbumByFormat(AlbumFormat format)
+        implements Statement<SelectAlbumByFormat.Output> {
 
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
 
-    /** Result of the statement parameterised by {@link Input}. */
+    /** Result of the statement parameterised by {@link SelectAlbumByFormat}. */
     public static final class Output extends ArrayList<OutputRow> {
         Output(List<OutputRow> rows) {
             super(rows);
@@ -95,8 +81,8 @@ public final class SelectAlbumByFormat
     }
 
     @Override
-    public void bindParams(PreparedStatement ps, Input p) throws SQLException {
-        ps.setObject(1, AlbumFormat.toPgObject(p.format()));
+    public void bindParams(PreparedStatement ps) throws SQLException {
+        ps.setObject(1, AlbumFormat.toPgObject(this.format()));
     }
 
     @Override

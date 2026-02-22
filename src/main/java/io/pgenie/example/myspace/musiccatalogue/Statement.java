@@ -13,7 +13,7 @@ import java.sql.SQLException;
  * @param <P> the parameter type passed to {@link #bindParams}
  * @param <R> the result type returned by {@link #decodeResult}
  */
-public interface Statement<P, R> {
+public interface Statement<R> {
 
     /**
      * The SQL text for this statement. Parameter placeholders use JDBC
@@ -23,14 +23,14 @@ public interface Statement<P, R> {
     String sql();
 
     /**
-     * Bind {@code params} to the prepared statement's parameter slots.
+     * Bind to the prepared statement's parameter slots.
      *
      * <p>Implementations set positional parameters starting at index 1.
      * Custom types ({@code AlbumFormat}, {@code RecordingInfo}) are bound as
      * {@link org.postgresql.util.PGobject} instances so that the PostgreSQL
      * driver sends the correct type OID.
      */
-    void bindParams(PreparedStatement ps, P params) throws SQLException;
+    void bindParams(PreparedStatement ps) throws SQLException;
 
     /**
      * Decode the result of the statement after {@link PreparedStatement#execute()}

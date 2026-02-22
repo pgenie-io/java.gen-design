@@ -26,31 +26,17 @@ import java.util.List;
  *
  * <p>Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
+ *
+ * @param artist Maps to {@code $artist} in the template. Nullable.
  */
-public final class SelectGenreByArtist
-        implements Statement<SelectGenreByArtist.Input, SelectGenreByArtist.Output> {
-
-    /** Singleton — stateless; safe to share across threads. */
-    public static final SelectGenreByArtist INSTANCE = new SelectGenreByArtist();
-
-    private SelectGenreByArtist() {}
-
-    // -------------------------------------------------------------------------
-    // Parameter type
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parameters for the {@code select_genre_by_artist} query.
-     *
-     * @param artist Maps to {@code $artist} in the template. Nullable.
-     */
-    public record Input(Integer artist) {}
+public record SelectGenreByArtist(Integer artist)
+        implements Statement<SelectGenreByArtist.Output> {
 
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
 
-    /** Result of the statement parameterised by {@link Input}. */
+    /** Result of the statement parameterised by {@link SelectGenreByArtist}. */
     public static final class Output extends ArrayList<OutputRow> {
         Output(List<OutputRow> rows) {
             super(rows);
@@ -80,9 +66,9 @@ public final class SelectGenreByArtist
     }
 
     @Override
-    public void bindParams(PreparedStatement ps, Input p) throws SQLException {
-        if (p.artist() != null) {
-            ps.setInt(1, p.artist());
+    public void bindParams(PreparedStatement ps) throws SQLException {
+        if (this.artist() != null) {
+            ps.setInt(1, this.artist());
         } else {
             ps.setNull(1, Types.INTEGER);
         }

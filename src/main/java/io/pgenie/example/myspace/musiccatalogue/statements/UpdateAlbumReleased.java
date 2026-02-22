@@ -23,29 +23,12 @@ import java.time.LocalDate;
  *
  * <p>Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
+ *
+ * @param released Maps to {@code $released} in the template. Nullable.
+ * @param id       Maps to {@code $id} in the template. Nullable.
  */
-public final class UpdateAlbumReleased
-        implements Statement<UpdateAlbumReleased.Input, Long> {
-
-    /** Singleton — stateless; safe to share across threads. */
-    public static final UpdateAlbumReleased INSTANCE = new UpdateAlbumReleased();
-
-    private UpdateAlbumReleased() {}
-
-    // -------------------------------------------------------------------------
-    // Parameter type
-    // -------------------------------------------------------------------------
-
-    /**
-     * Parameters for the {@code update_album_released} query.
-     *
-     * @param released Maps to {@code $released} in the template. Nullable.
-     * @param id       Maps to {@code $id} in the template. Nullable.
-     */
-    public record Input(
-            LocalDate released,
-            Long id
-    ) {}
+public record UpdateAlbumReleased(LocalDate released, Long id)
+        implements Statement<Long> {
 
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -62,14 +45,14 @@ public final class UpdateAlbumReleased
     }
 
     @Override
-    public void bindParams(PreparedStatement ps, Input p) throws SQLException {
-        if (p.released() != null) {
-            ps.setDate(1, Date.valueOf(p.released()));
+    public void bindParams(PreparedStatement ps) throws SQLException {
+        if (this.released() != null) {
+            ps.setDate(1, Date.valueOf(this.released()));
         } else {
             ps.setNull(1, Types.DATE);
         }
-        if (p.id() != null) {
-            ps.setLong(2, p.id());
+        if (this.id() != null) {
+            ps.setLong(2, this.id());
         } else {
             ps.setNull(2, Types.BIGINT);
         }
