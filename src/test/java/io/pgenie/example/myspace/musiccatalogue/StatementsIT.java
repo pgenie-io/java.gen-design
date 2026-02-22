@@ -308,4 +308,69 @@ class StatementsIT {
             assertEquals(0L, affected);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // no_preparing mode — same operations succeed when noPreparing=true
+    // -------------------------------------------------------------------------
+
+    private Pool poolNoPreparing() {
+        HikariConfig cfg = new HikariConfig();
+        cfg.setJdbcUrl(PG.getJdbcUrl());
+        cfg.setUsername(PG.getUsername());
+        cfg.setPassword(PG.getPassword());
+        cfg.setMaximumPoolSize(2);
+        return new Pool(cfg, true);
+    }
+
+    @Test
+    void noPreparingInsertAlbumReturnsId() throws SQLException {
+        try (Pool p = poolNoPreparing(); Session session = p.session()) {
+            var result = session.execute(new InsertAlbum(
+                    "Animals",
+                    LocalDate.of(1977, 1, 21),
+                    AlbumFormat.VINYL,
+                    new RecordingInfo(
+                            "Britannia Row Studios",
+                            "London",
+                            "UK",
+                            LocalDate.of(1976, 7, 1)
+                    )
+            ));
+            assertTrue(result.id() > 0, "expected a positive id, got " + result.id());
+        }
+    }
+
+    @Test
+    void noPreparingSelectAlbumByFormatFindsInsertedAlbum() throws SQLException {
+        try (Pool p = poolNoPreparing(); Session session = p.session()) {
+            var recording = new RecordingInfo(
+                    "Rockfield Studio",
+                    "Monmouth",
+                    "UK",
+                    LocalDate.of(1975, 1, 1)
+            );
+            var inserted = session.execute(new InsertAlbum(
+                    "A Night at the Opera",
+                    LocalDate.of(1975, 11, 21),
+                    AlbumFormat.CD,
+                    recording
+            ));
+
+            var rows = session.execute(new SelectAlbumByFormat(AlbumFormat.CD));
+
+            assertTrue(
+                    rows.stream().anyMatch(r -> r.id() == inserted.id()),
+                    "inserted album not found in result set"
+            );
+        }
+    }
+
+    @Test
+    void noPreparingUpdateAlbumReleasedNoMatchIsNoop() throws SQLException {
+        try (Pool p = poolNoPreparing(); Session session = p.session()) {
+            long affected = session.execute(
+                    new UpdateAlbumReleased(LocalDate.of(2000, 1, 1), 99999L));
+            assertEquals(0L, affected);
+        }
+    }
 }

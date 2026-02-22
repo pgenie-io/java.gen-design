@@ -19,9 +19,11 @@ import java.sql.SQLException;
 public final class Session implements AutoCloseable {
 
     private final Connection conn;
+    private final boolean noPreparing;
 
-    Session(Connection conn) {
+    Session(Connection conn, boolean noPreparing) {
         this.conn = conn;
+        this.noPreparing = noPreparing;
     }
 
     /**
@@ -47,7 +49,7 @@ public final class Session implements AutoCloseable {
      */
     public Transaction transaction() throws SQLException {
         conn.setAutoCommit(false);
-        return new Transaction(conn);
+        return new Transaction(conn, noPreparing);
     }
 
     /**
@@ -55,7 +57,7 @@ public final class Session implements AutoCloseable {
      * characteristics before starting.
      */
     public TransactionBuilder buildTransaction() {
-        return new TransactionBuilder(conn);
+        return new TransactionBuilder(conn, noPreparing);
     }
 
     /** Return the connection to the pool. */

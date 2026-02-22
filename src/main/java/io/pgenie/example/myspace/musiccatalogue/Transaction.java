@@ -22,10 +22,12 @@ import java.sql.SQLException;
 public final class Transaction implements AutoCloseable {
 
     private final Connection conn;
+    private final boolean noPreparing;
     private boolean done = false;
 
-    Transaction(Connection conn) {
+    Transaction(Connection conn, boolean noPreparing) {
         this.conn = conn;
+        this.noPreparing = noPreparing;
     }
 
     /**

@@ -20,12 +20,14 @@ import java.sql.SQLException;
 public final class TransactionBuilder {
 
     private final Connection conn;
+    private final boolean noPreparing;
     private int isolationLevel = Connection.TRANSACTION_READ_COMMITTED;
     private boolean readOnly = false;
     private boolean deferrable = false;
 
-    TransactionBuilder(Connection conn) {
+    TransactionBuilder(Connection conn, boolean noPreparing) {
         this.conn = conn;
+        this.noPreparing = noPreparing;
     }
 
     /**
@@ -74,6 +76,6 @@ public final class TransactionBuilder {
                 stmt.execute("SET TRANSACTION DEFERRABLE");
             }
         }
-        return new Transaction(conn);
+        return new Transaction(conn, noPreparing);
     }
 }

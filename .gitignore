@@ -17,6 +17,7 @@
 !/CHANGELOG.md
 !/Cargo.lock
 !/Cargo.toml
+!/pom.xml
 
 # Unignore subtrees:
 !/.github/
