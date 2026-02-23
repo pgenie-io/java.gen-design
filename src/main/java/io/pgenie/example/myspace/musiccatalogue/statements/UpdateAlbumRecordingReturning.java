@@ -17,6 +17,7 @@ import java.util.List;
  * Type-safe binding for the {@code update_album_recording_returning} query.
  *
  * <h2>SQL Template</h2>
+ * 
  * <pre>{@code
  * -- Update album recording information
  * update album
@@ -28,7 +29,8 @@ import java.util.List;
  * <h2>Source Path</h2>
  * {@code ./queries/update_album_recording_returning.sql}
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param recording Maps to {@code $recording} in the template. Nullable.
@@ -41,10 +43,12 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
     // Result type
     // -------------------------------------------------------------------------
 
-    /** Result of the statement parameterised by {@link UpdateAlbumRecordingReturning}. */
+    /**
+     * Result of the statement parameterised by
+     * {@link UpdateAlbumRecordingReturning}.
+     */
     public static final class Output extends ArrayList<OutputRow> {
-        Output(List<OutputRow> rows) {
-            super(rows);
+        Output() {
         }
     }
 
@@ -59,8 +63,8 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
             /** Maps to the {@code format} result-set column. Nullable. */
             AlbumFormat format,
             /** Maps to the {@code recording} result-set column. Nullable. */
-            RecordingInfo recording
-    ) {}
+            RecordingInfo recording) {
+    }
 
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -93,7 +97,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
 
     @Override
     public Output decodeResultSet(ResultSet rs) throws SQLException {
-        List<OutputRow> rows = new ArrayList<>();
+        Output output = new Output();
         while (rs.next()) {
             long id = rs.getLong(1);
             String name = rs.getString(2);
@@ -101,13 +105,15 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
             AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr) : null;
+                    ? AlbumFormat.fromPgValue(formatStr)
+                    : null;
             String recordingStr = rs.getString(5);
             RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr) : null;
-            rows.add(new OutputRow(id, name, released, format, recording));
+                    ? RecordingInfo.parse(recordingStr)
+                    : null;
+            output.add(new OutputRow(id, name, released, format, recording));
         }
-        return new Output(rows);
+        return output;
     }
 
     @Override

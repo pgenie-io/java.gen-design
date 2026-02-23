@@ -7,12 +7,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Type-safe binding for the {@code select_genre_by_artist} query.
  *
  * <h2>SQL Template</h2>
+ * 
  * <pre>{@code
  * select id, genre.name
  * from genre
@@ -24,7 +24,8 @@ import java.util.List;
  * <h2>Source Path</h2>
  * {@code ./queries/select_genre_by_artist.sql}
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param artist Maps to {@code $artist} in the template. Nullable.
@@ -38,8 +39,7 @@ public record SelectGenreByArtist(Integer artist)
 
     /** Result of the statement parameterised by {@link SelectGenreByArtist}. */
     public static final class Output extends ArrayList<OutputRow> {
-        Output(List<OutputRow> rows) {
-            super(rows);
+        Output() {
         }
     }
 
@@ -48,8 +48,8 @@ public record SelectGenreByArtist(Integer artist)
             /** Maps to the {@code id} result-set column. */
             int id,
             /** Maps to the {@code name} result-set column. */
-            String name
-    ) {}
+            String name) {
+    }
 
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -81,13 +81,11 @@ public record SelectGenreByArtist(Integer artist)
 
     @Override
     public Output decodeResultSet(ResultSet rs) throws SQLException {
-        List<OutputRow> rows = new ArrayList<>();
+        Output output = new Output();
         while (rs.next()) {
-            int id = rs.getInt(1);
-            String name = rs.getString(2);
-            rows.add(new OutputRow(id, name));
+            output.add(new OutputRow(rs.getInt(1), rs.getString(2)));
         }
-        return new Output(rows);
+        return output;
     }
 
     @Override

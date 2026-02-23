@@ -16,6 +16,7 @@ import java.util.List;
  * Type-safe binding for the {@code select_album_by_format} query.
  *
  * <h2>SQL Template</h2>
+ * 
  * <pre>{@code
  * select
  *   id,
@@ -30,7 +31,8 @@ import java.util.List;
  * <h2>Source Path</h2>
  * {@code ./queries/select_album_by_format.sql}
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param format Maps to {@code $format} in the template. Nullable.
@@ -44,8 +46,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     /** Result of the statement parameterised by {@link SelectAlbumByFormat}. */
     public static final class Output extends ArrayList<OutputRow> {
-        Output(List<OutputRow> rows) {
-            super(rows);
+        Output() {
         }
     }
 
@@ -60,8 +61,8 @@ public record SelectAlbumByFormat(AlbumFormat format)
             /** Maps to the {@code format} result-set column. Nullable. */
             AlbumFormat format,
             /** Maps to the {@code recording} result-set column. Nullable. */
-            RecordingInfo recording
-    ) {}
+            RecordingInfo recording) {
+    }
 
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -92,7 +93,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     @Override
     public Output decodeResultSet(ResultSet rs) throws SQLException {
-        List<OutputRow> rows = new ArrayList<>();
+        Output output = new Output();
         while (rs.next()) {
             long id = rs.getLong(1);
             String name = rs.getString(2);
@@ -100,13 +101,15 @@ public record SelectAlbumByFormat(AlbumFormat format)
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
             AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr) : null;
+                    ? AlbumFormat.fromPgValue(formatStr)
+                    : null;
             String recordingStr = rs.getString(5);
             RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr) : null;
-            rows.add(new OutputRow(id, name, released, format, recording));
+                    ? RecordingInfo.parse(recordingStr)
+                    : null;
+            output.add(new OutputRow(id, name, released, format, recording));
         }
-        return new Output(rows);
+        return output;
     }
 
     @Override
