@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Integration tests for all generated statements.
  *
- * <pool>
+ * <p>
  * A PostgreSQL container is started once for the test class. Migrations are
  * applied before any test runs. Each test method obtains a fresh {@link Pool}
  * so that test data does not bleed between tests (each test uses the same
