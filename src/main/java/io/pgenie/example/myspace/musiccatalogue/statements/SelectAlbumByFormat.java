@@ -86,7 +86,12 @@ public record SelectAlbumByFormat(AlbumFormat format)
     }
 
     @Override
-    public Output decodeResult(PreparedStatement ps) throws SQLException {
+    public boolean returnsRows() {
+        return true;
+    }
+
+    @Override
+    public Output decodeResult(PreparedStatement ps, long affectedRows) throws SQLException {
         List<OutputRow> rows = new ArrayList<>();
         try (ResultSet rs = ps.getResultSet()) {
             while (rs.next()) {

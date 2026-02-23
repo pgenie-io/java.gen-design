@@ -60,12 +60,20 @@ public record UpdateAlbumReleased(LocalDate released, Long id)
 
     /**
      * Returns the number of rows affected by the update.
-     *
-     * <p>Reads {@link PreparedStatement#getUpdateCount()} after
-     * {@link PreparedStatement#execute()} has been called.
      */
     @Override
-    public Long decodeResult(PreparedStatement ps) throws SQLException {
-        return (long) ps.getUpdateCount();
+    public boolean returnsRows() {
+        return false;
+    }
+
+    /**
+     * Returns the number of rows affected by the update.
+     *
+     * <p>Uses {@code affectedRows} forwarded from
+     * {@link PreparedStatement#executeUpdate()}.
+     */
+    @Override
+    public Long decodeResult(PreparedStatement ps, long affectedRows) throws SQLException {
+        return affectedRows;
     }
 }
