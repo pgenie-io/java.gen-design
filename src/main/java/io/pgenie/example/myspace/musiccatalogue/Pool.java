@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -70,24 +71,25 @@ public final class Pool implements AutoCloseable {
      * and the result is decoded — all within this call.
      *
      * <p>When {@link Statement#returnsRows()} is {@code true} the statement is
-     * run with {@link PreparedStatement#execute()} so the result set is
-     * accessible via {@link PreparedStatement#getResultSet()}.  Otherwise
+     * run with {@link PreparedStatement#execute()} and the result set is
+     * forwarded to {@link Statement#decodeResultSet}.  Otherwise
      * {@link PreparedStatement#executeUpdate()} is used and the affected-row
-     * count is forwarded to {@link Statement#decodeResult}.
+     * count is forwarded to {@link Statement#decodeAffectedRows}.
      */
     public <R> R execute(Statement<R> stmt) throws SQLException {
         try (
             Connection conn = dataSource.getConnection();
             PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
             stmt.bindParams(ps);
-            long affectedRows;
             if (stmt.returnsRows()) {
                 ps.execute();
-                affectedRows = 0;
+                try (ResultSet rs = ps.getResultSet()) {
+                    return stmt.decodeResultSet(rs);
+                }
             } else {
-                affectedRows = ps.executeUpdate();
+                long affectedRows = ps.executeUpdate();
+                return stmt.decodeAffectedRows(affectedRows);
             }
-            return stmt.decodeResult(ps, affectedRows);
         }
     }
 

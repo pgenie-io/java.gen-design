@@ -2,6 +2,7 @@ package io.pgenie.example.myspace.musiccatalogue;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -25,21 +26,23 @@ public final class TransactionContext {
      *
      * <p>Follows the same {@link Statement#returnsRows()} branching as
      * {@link Pool#execute}: row-returning statements use
-     * {@link PreparedStatement#execute()}, DML statements use
+     * {@link PreparedStatement#execute()} and forward the result set to
+     * {@link Statement#decodeResultSet}, DML statements use
      * {@link PreparedStatement#executeUpdate()} and forward the affected-row
-     * count to {@link Statement#decodeResult}.
+     * count to {@link Statement#decodeAffectedRows}.
      */
     public <R> R execute(Statement<R> stmt) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
             stmt.bindParams(ps);
-            long affectedRows;
             if (stmt.returnsRows()) {
                 ps.execute();
-                affectedRows = 0;
+                try (ResultSet rs = ps.getResultSet()) {
+                    return stmt.decodeResultSet(rs);
+                }
             } else {
-                affectedRows = ps.executeUpdate();
+                long affectedRows = ps.executeUpdate();
+                return stmt.decodeAffectedRows(affectedRows);
             }
-            return stmt.decodeResult(ps, affectedRows);
         }
     }
 }

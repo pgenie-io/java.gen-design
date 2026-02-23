@@ -13,6 +13,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -380,8 +381,13 @@ class StatementsIT {
         }
 
         @Override
-        public Void decodeResult(PreparedStatement ps, long affectedRows) {
+        public Void decodeAffectedRows(long affectedRows) {
             return null;
+        }
+
+        @Override
+        public Void decodeResultSet(ResultSet rs) {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -402,8 +408,13 @@ class StatementsIT {
         }
 
         @Override
-        public Void decodeResult(PreparedStatement ps, long affectedRows) {
+        public Void decodeAffectedRows(long affectedRows) {
             return null;
+        }
+
+        @Override
+        public Void decodeResultSet(ResultSet rs) {
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -534,11 +545,14 @@ class StatementsIT {
         }
 
         @Override
-        public Long decodeResult(PreparedStatement ps, long affectedRows) throws SQLException {
-            try (var rs = ps.getResultSet()) {
-                rs.next();
-                return rs.getLong(1);
-            }
+        public Long decodeResultSet(ResultSet rs) throws SQLException {
+            rs.next();
+            return rs.getLong(1);
+        }
+
+        @Override
+        public Long decodeAffectedRows(long affectedRows) {
+            throw new UnsupportedOperationException();
         }
     }
 }

@@ -92,23 +92,26 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
     }
 
     @Override
-    public Output decodeResult(PreparedStatement ps, long affectedRows) throws SQLException {
+    public Output decodeResultSet(ResultSet rs) throws SQLException {
         List<OutputRow> rows = new ArrayList<>();
-        try (ResultSet rs = ps.getResultSet()) {
-            while (rs.next()) {
-                long id = rs.getLong(1);
-                String name = rs.getString(2);
-                Date releasedSql = rs.getDate(3);
-                LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
-                String formatStr = rs.getString(4);
-                AlbumFormat format = formatStr != null
-                        ? AlbumFormat.fromPgValue(formatStr) : null;
-                String recordingStr = rs.getString(5);
-                RecordingInfo recording = recordingStr != null
-                        ? RecordingInfo.parse(recordingStr) : null;
-                rows.add(new OutputRow(id, name, released, format, recording));
-            }
+        while (rs.next()) {
+            long id = rs.getLong(1);
+            String name = rs.getString(2);
+            Date releasedSql = rs.getDate(3);
+            LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
+            String formatStr = rs.getString(4);
+            AlbumFormat format = formatStr != null
+                    ? AlbumFormat.fromPgValue(formatStr) : null;
+            String recordingStr = rs.getString(5);
+            RecordingInfo recording = recordingStr != null
+                    ? RecordingInfo.parse(recordingStr) : null;
+            rows.add(new OutputRow(id, name, released, format, recording));
         }
         return new Output(rows);
+    }
+
+    @Override
+    public Output decodeAffectedRows(long affectedRows) {
+        throw new UnsupportedOperationException();
     }
 }

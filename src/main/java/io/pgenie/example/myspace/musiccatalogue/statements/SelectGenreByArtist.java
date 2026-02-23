@@ -80,15 +80,18 @@ public record SelectGenreByArtist(Integer artist)
     }
 
     @Override
-    public Output decodeResult(PreparedStatement ps, long affectedRows) throws SQLException {
+    public Output decodeResultSet(ResultSet rs) throws SQLException {
         List<OutputRow> rows = new ArrayList<>();
-        try (ResultSet rs = ps.getResultSet()) {
-            while (rs.next()) {
-                int id = rs.getInt(1);
-                String name = rs.getString(2);
-                rows.add(new OutputRow(id, name));
-            }
+        while (rs.next()) {
+            int id = rs.getInt(1);
+            String name = rs.getString(2);
+            rows.add(new OutputRow(id, name));
         }
         return new Output(rows);
+    }
+
+    @Override
+    public Output decodeAffectedRows(long affectedRows) {
+        throw new UnsupportedOperationException();
     }
 }
