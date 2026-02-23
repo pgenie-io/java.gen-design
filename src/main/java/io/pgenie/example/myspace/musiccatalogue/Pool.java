@@ -21,7 +21,6 @@ import java.sql.SQLException;
 public final class Pool implements AutoCloseable {
 
     private final HikariDataSource dataSource;
-    private final boolean noPreparing;
 
     /**
      * Create a pool from a pre-configured {@link HikariConfig}.
@@ -62,7 +61,6 @@ public final class Pool implements AutoCloseable {
             config.addDataSourceProperty("preferQueryMode", "simple");
         }
         this.dataSource = new HikariDataSource(config);
-        this.noPreparing = noPreparing;
     }
 
     /**
