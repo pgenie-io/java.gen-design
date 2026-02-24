@@ -5,7 +5,8 @@ import java.sql.Connection;
 /**
  * Transaction isolation level.
  *
- * <p>Passed to {@link Pool#transact} via {@link Transaction#isolationLevel()}.
+ * <p>
+ * Passed to {@link Pool#transact} via {@link Transaction#isolationLevel()}.
  */
 public enum IsolationLevel {
 
@@ -24,7 +25,10 @@ public enum IsolationLevel {
      */
     SERIALIZABLE;
 
-    /** Convert to the corresponding {@link Connection}{@code .TRANSACTION_*} constant. */
+    /**
+     * Convert to the corresponding {@link Connection}{@code .TRANSACTION_*}
+     * constant.
+     */
     int toJdbc() {
         return switch (this) {
             case READ_COMMITTED -> Connection.TRANSACTION_READ_COMMITTED;

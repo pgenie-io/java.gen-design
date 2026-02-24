@@ -8,7 +8,8 @@ import java.sql.SQLException;
  * Representation of the {@code album_format} user-declared PostgreSQL
  * enumeration type.
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  */
 public enum AlbumFormat {

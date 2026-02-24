@@ -13,6 +13,7 @@ import java.time.LocalDate;
  * Type-safe binding for the {@code update_album_released} query.
  *
  * <h2>SQL Template</h2>
+ * 
  * <pre>{@code
  * update album
  * set released = $released
@@ -22,7 +23,8 @@ import java.time.LocalDate;
  * <h2>Source Path</h2>
  * {@code ./queries/update_album_released.sql}
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param released Maps to {@code $released} in the template. Nullable.
@@ -70,7 +72,8 @@ public record UpdateAlbumReleased(LocalDate released, Long id)
     /**
      * Returns the number of rows affected by the update.
      *
-     * <p>Uses {@code affectedRows} forwarded from
+     * <p>
+     * Uses {@code affectedRows} forwarded from
      * {@link java.sql.PreparedStatement#executeUpdate()}.
      */
     @Override

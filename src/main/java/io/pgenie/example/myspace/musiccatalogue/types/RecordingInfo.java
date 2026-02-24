@@ -11,10 +11,12 @@ import java.util.List;
  * Representation of the {@code recording_info} user-declared PostgreSQL
  * composite (record) type.
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
- * <p>All fields are nullable, matching the PostgreSQL column definitions.
+ * <p>
+ * All fields are nullable, matching the PostgreSQL column definitions.
  *
  * @param studioName   Maps to {@code studio_name}.
  * @param city         Maps to {@code city}.
@@ -25,14 +27,14 @@ public record RecordingInfo(
         String studioName,
         String city,
         String country,
-        LocalDate recordedDate
-) {
+        LocalDate recordedDate) {
 
     /**
      * Encode this record as a PostgreSQL composite literal string, e.g.
      * {@code ("Abbey Road",London,UK,1972-06-01)}.
      *
-     * <p>Fields that are {@code null} are represented as empty tokens.
+     * <p>
+     * Fields that are {@code null} are represented as empty tokens.
      * Fields that contain commas, parentheses, double-quotes, backslashes, or
      * white-space are double-quoted with internal double-quotes escaped as
      * {@code ""} and backslashes escaped as {@code \\}.
@@ -61,18 +63,20 @@ public record RecordingInfo(
     /**
      * Parse a PostgreSQL composite literal string into a {@code RecordingInfo}.
      *
-     * <p>The expected format is {@code (field1,field2,field3,field4)} where
+     * <p>
+     * The expected format is {@code (field1,field2,field3,field4)} where
      * fields follow the PostgreSQL composite text-output rules:
      * <ul>
-     *   <li>NULL fields are empty tokens (no quotes).</li>
-     *   <li>Fields with special characters are double-quoted.</li>
-     *   <li>A literal double-quote inside a quoted field is written as
-     *       {@code ""}.</li>
-     *   <li>A literal backslash is written as {@code \\}.</li>
+     * <li>NULL fields are empty tokens (no quotes).</li>
+     * <li>Fields with special characters are double-quoted.</li>
+     * <li>A literal double-quote inside a quoted field is written as
+     * {@code ""}.</li>
+     * <li>A literal backslash is written as {@code \\}.</li>
      * </ul>
      *
      * @throws IllegalArgumentException if the string is not a valid composite
-     *         literal or does not contain exactly four fields.
+     *                                  literal or does not contain exactly four
+     *                                  fields.
      */
     public static RecordingInfo parse(String text) {
         if (text == null) {
@@ -82,14 +86,15 @@ public record RecordingInfo(
         if (fields.size() != 4) {
             throw new IllegalArgumentException(
                     "Expected 4 fields in recording_info composite, got " +
-                    fields.size() + ": " + text);
+                            fields.size() + ": " + text);
         }
         String studioName = fields.get(0);
         String city = fields.get(1);
         String country = fields.get(2);
         String recordedDateStr = fields.get(3);
         LocalDate recordedDate = recordedDateStr != null
-                ? LocalDate.parse(recordedDateStr) : null;
+                ? LocalDate.parse(recordedDateStr)
+                : null;
         return new RecordingInfo(studioName, city, country, recordedDate);
     }
 

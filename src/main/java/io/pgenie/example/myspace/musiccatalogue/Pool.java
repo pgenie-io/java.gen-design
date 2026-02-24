@@ -11,11 +11,13 @@ import java.sql.SQLException;
 /**
  * Connection pool for the music-catalogue database.
  *
- * <p>Wraps a {@link HikariDataSource} and vends {@link Session} objects that
+ * <p>
+ * Wraps a {@link HikariDataSource} and vends {@link Session} objects that
  * hold a single pooled {@link java.sql.Connection}. The pool must be
  * {@link #close() closed} when the application shuts down.
  *
- * <p>When {@code noPreparing} is {@code true} the pool configures every
+ * <p>
+ * When {@code noPreparing} is {@code true} the pool configures every
  * connection to use PostgreSQL's simple-query protocol, so statements are
  * executed without server-side preparation.
  */
@@ -26,7 +28,9 @@ public final class Pool implements AutoCloseable {
     /**
      * Create a pool from a pre-configured {@link HikariConfig}.
      *
-     * <p>Example minimal configuration:
+     * <p>
+     * Example minimal configuration:
+     * 
      * <pre>{@code
      * HikariConfig cfg = new HikariConfig();
      * cfg.setJdbcUrl("jdbc:postgresql://localhost:5432/postgres");
@@ -43,13 +47,16 @@ public final class Pool implements AutoCloseable {
      * Create a pool from a pre-configured {@link HikariConfig}, optionally
      * disabling server-side statement preparation.
      *
-     * <p>When {@code noPreparing} is {@code true} the PostgreSQL JDBC driver
-     * is configured to use the simple-query protocol ({@code preferQueryMode=simple})
+     * <p>
+     * When {@code noPreparing} is {@code true} the PostgreSQL JDBC driver
+     * is configured to use the simple-query protocol
+     * ({@code preferQueryMode=simple})
      * for all connections, which means statements are never prepared on the
      * server. This is useful in environments where prepared statements are not
      * supported (e.g. PgBouncer in transaction-pooling mode).
      *
-     * <p>Note: this method adds a datasource property to {@code config}
+     * <p>
+     * Note: this method adds a datasource property to {@code config}
      * before the underlying {@link HikariDataSource} is created.
      *
      * @param config      HikariCP configuration (may be mutated when
@@ -67,19 +74,21 @@ public final class Pool implements AutoCloseable {
     /**
      * Execute a {@link Statement} and return its decoded result.
      *
-     * <p>The statement is prepared, its parameters are bound, it is executed,
+     * <p>
+     * The statement is prepared, its parameters are bound, it is executed,
      * and the result is decoded — all within this call.
      *
-     * <p>When {@link Statement#returnsRows()} is {@code true} the statement is
+     * <p>
+     * When {@link Statement#returnsRows()} is {@code true} the statement is
      * run with {@link PreparedStatement#execute()} and the result set is
-     * forwarded to {@link Statement#decodeResultSet}.  Otherwise
+     * forwarded to {@link Statement#decodeResultSet}. Otherwise
      * {@link PreparedStatement#executeUpdate()} is used and the affected-row
      * count is forwarded to {@link Statement#decodeAffectedRows}.
      */
     public <R> R execute(Statement<R> stmt) throws SQLException {
         try (
-            Connection conn = dataSource.getConnection();
-            PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
+                Connection conn = dataSource.getConnection();
+                PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
             stmt.bindParams(ps);
             if (stmt.returnsRows()) {
                 ps.execute();
@@ -98,13 +107,14 @@ public final class Pool implements AutoCloseable {
      * serialisation failure (SQLState {@code 40001}) or deadlock (SQLState
      * {@code 40P01}).
      *
-     * <p>A single connection is acquired for the duration of all attempts and
-     * released when the method returns.  The transaction's isolation level,
+     * <p>
+     * A single connection is acquired for the duration of all attempts and
+     * released when the method returns. The transaction's isolation level,
      * read-only flag, and deferrable flag are configured from the
      * {@link Transaction} implementation's default methods before each attempt.
      *
      * @param transaction the transaction to run
-     * @param <R> the result type
+     * @param <R>         the result type
      * @return the result returned by the committed (or explicitly rolled-back)
      *         transaction
      * @throws SQLException if the transaction fails with a non-retryable error

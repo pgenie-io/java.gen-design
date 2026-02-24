@@ -15,6 +15,7 @@ import java.time.LocalDate;
  * Type-safe binding for the {@code insert_album} query.
  *
  * <h2>SQL Template</h2>
+ * 
  * <pre>{@code
  * insert into album (name, released, format, recording)
  * values ($name, $released, $format, $recording)
@@ -24,7 +25,8 @@ import java.time.LocalDate;
  * <h2>Source Path</h2>
  * {@code ./queries/insert_album.sql}
  *
- * <p>Generated from SQL queries using the
+ * <p>
+ * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  * 
  * @param name      Maps to {@code $name} in the template. Non-null.
@@ -33,11 +35,10 @@ import java.time.LocalDate;
  * @param recording Maps to {@code $recording} in the template. Nullable.
  */
 public record InsertAlbum(
-            String name,
-            LocalDate released,
-            AlbumFormat format,
-            RecordingInfo recording
-    ) implements Statement<InsertAlbum.Output> {
+        String name,
+        LocalDate released,
+        AlbumFormat format,
+        RecordingInfo recording) implements Statement<InsertAlbum.Output> {
 
     // -------------------------------------------------------------------------
     // Result type
@@ -46,8 +47,8 @@ public record InsertAlbum(
     /** Result of the statement parameterised by {@link Input}. */
     public record Output(
             /** Maps to the {@code id} result-set column. */
-            long id
-    ) {}
+            long id) {
+    }
 
     // -------------------------------------------------------------------------
     // Statement implementation

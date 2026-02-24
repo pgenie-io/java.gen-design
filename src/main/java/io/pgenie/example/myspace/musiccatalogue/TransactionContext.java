@@ -8,8 +8,9 @@ import java.sql.SQLException;
 /**
  * Execution context passed to {@link Transaction#run} implementations.
  *
- * <p>Wraps the underlying {@link Connection} that is already in a transaction,
- * providing only statement execution.  Commit and rollback are managed by
+ * <p>
+ * Wraps the underlying {@link Connection} that is already in a transaction,
+ * providing only statement execution. Commit and rollback are managed by
  * {@link Pool#transact}.
  */
 public final class TransactionContext {
@@ -24,7 +25,8 @@ public final class TransactionContext {
      * Execute a {@link Statement} within the current transaction and return
      * its decoded result.
      *
-     * <p>Follows the same {@link Statement#returnsRows()} branching as
+     * <p>
+     * Follows the same {@link Statement#returnsRows()} branching as
      * {@link Pool#execute}: row-returning statements use
      * {@link PreparedStatement#execute()} and forward the result set to
      * {@link Statement#decodeResultSet}, DML statements use
@@ -45,4 +47,5 @@ public final class TransactionContext {
             }
         }
     }
+
 }

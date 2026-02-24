@@ -13,7 +13,8 @@ import java.sql.SQLException;
  * code generator.
  *
  * @param <P> the parameter type passed to {@link #bindParams}
- * @param <R> the result type returned by {@link #decodeResultSet} or {@link #decodeAffectedRows}
+ * @param <R> the result type returned by {@link #decodeResultSet} or
+ *            {@link #decodeAffectedRows}
  */
 public interface Statement<R> {
 
