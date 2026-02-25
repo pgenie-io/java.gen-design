@@ -1,8 +1,6 @@
 package io.pgenie.example.myspace.musiccatalogue.types;
 
-import org.postgresql.util.PGobject;
-
-import java.sql.SQLException;
+import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
 
 /**
  * Representation of the {@code album_format} user-declared PostgreSQL
@@ -38,29 +36,9 @@ public enum AlbumFormat {
         return pgValue;
     }
 
-    /**
-     * Look up an {@code AlbumFormat} by its PostgreSQL label string.
-     *
-     * @throws IllegalArgumentException if {@code value} is not a known label.
-     */
-    public static AlbumFormat fromPgValue(String value) {
-        for (AlbumFormat f : values()) {
-            if (f.pgValue.equals(value)) {
-                return f;
-            }
-        }
-        throw new IllegalArgumentException("Unknown album_format value: " + value);
-    }
+    public static final Enum<AlbumFormat> codec = new Enum<>(
+            "public", "album_format",
+            AlbumFormat.values(),
+            AlbumFormat::pgValue);
 
-    /**
-     * Encode a nullable {@code AlbumFormat} as a {@link PGobject} suitable for
-     * use as a JDBC parameter. A {@code null} input produces a {@code PGobject}
-     * whose value is {@code null} (SQL NULL).
-     */
-    public static PGobject toPgObject(AlbumFormat value) throws SQLException {
-        PGobject obj = new PGobject();
-        obj.setType("album_format");
-        obj.setValue(value != null ? value.pgValue() : null);
-        return obj;
-    }
 }

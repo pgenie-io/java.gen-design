@@ -104,9 +104,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr)
-                    : null;
+            AlbumFormat format = AlbumFormat.codec.parse(formatStr);
             String recordingStr = rs.getString(5);
             RecordingInfo recording = RecordingInfo.codec.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));

@@ -83,7 +83,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, AlbumFormat.toPgObject(this.format()));
+        ps.setObject(1, AlbumFormat.codec.toPgObject(this.format()));
     }
 
     @Override
@@ -100,9 +100,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr)
-                    : null;
+            AlbumFormat format = AlbumFormat.codec.parse(formatStr);
             String recordingStr = rs.getString(5);
             RecordingInfo recording =  RecordingInfo.codec.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
