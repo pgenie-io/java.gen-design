@@ -1,12 +1,10 @@
 package io.pgenie.example.myspace.musiccatalogue.types;
 
+import java.time.LocalDate;
+
 import io.pgenie.example.myspace.musiccatalogue.codecs.Composite;
 import io.pgenie.example.myspace.musiccatalogue.codecs.CompositeField;
 import io.pgenie.example.myspace.musiccatalogue.codecs.Scalar;
-import org.postgresql.util.PGobject;
-
-import java.sql.SQLException;
-import java.time.LocalDate;
 
 /**
  * Representation of the {@code recording_info} user-declared PostgreSQL
@@ -30,13 +28,13 @@ public record RecordingInfo(
         String country,
         LocalDate recordedDate) {
 
-    public static final Composite<RecordingInfo> codec = new Composite<>(
+    public static final Composite<RecordingInfo> CODEC = new Composite<>(
             "public", "recording_info",
             (String studioName) -> (String city) -> (String country) -> (LocalDate recordedDate) -> new RecordingInfo(
                     studioName, city, country, recordedDate),
-            new CompositeField<>("studio_name", RecordingInfo::studioName, Scalar.text),
-            new CompositeField<>("city", RecordingInfo::city, Scalar.text),
-            new CompositeField<>("country", RecordingInfo::country, Scalar.text),
-            new CompositeField<>("recorded_date", RecordingInfo::recordedDate, Scalar.localDate));
+            new CompositeField<>("studio_name", RecordingInfo::studioName, Scalar.TEXT),
+            new CompositeField<>("city", RecordingInfo::city, Scalar.TEXT),
+            new CompositeField<>("country", RecordingInfo::country, Scalar.TEXT),
+            new CompositeField<>("recorded_date", RecordingInfo::recordedDate, Scalar.DATE));
 
 }

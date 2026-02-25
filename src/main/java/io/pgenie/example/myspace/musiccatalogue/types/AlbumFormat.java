@@ -1,8 +1,8 @@
 package io.pgenie.example.myspace.musiccatalogue.types;
 
-import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
-
 import java.util.Map;
+
+import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
 
 /**
  * Representation of the {@code album_format} user-declared PostgreSQL
@@ -27,7 +27,7 @@ public enum AlbumFormat {
     /** Corresponds to the PostgreSQL enum variant {@code SACD}. */
     SACD;
 
-    public static final Enum<AlbumFormat> codec = new Enum<>(
+    public static final Enum<AlbumFormat> CODEC = new Enum<>(
         "public", "album_format",
         Map.ofEntries(
             Map.entry(VINYL, "Vinyl"),

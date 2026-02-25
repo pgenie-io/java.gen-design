@@ -1,16 +1,15 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.Statement;
-import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
-import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
+
+import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
+import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
 /**
  * Type-safe binding for the {@code select_album_by_format} query.
@@ -83,7 +82,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        AlbumFormat.codec.bind(ps, 1, this.format());
+        AlbumFormat.CODEC.bind(ps, 1, this.format());
     }
 
     @Override
@@ -100,9 +99,9 @@ public record SelectAlbumByFormat(AlbumFormat format)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = AlbumFormat.codec.parse(formatStr);
+            AlbumFormat format = AlbumFormat.CODEC.parse(formatStr);
             String recordingStr = rs.getString(5);
-            RecordingInfo recording =  RecordingInfo.codec.parse(recordingStr);
+            RecordingInfo recording =  RecordingInfo.CODEC.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;

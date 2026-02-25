@@ -4,9 +4,11 @@ import java.sql.PreparedStatement;
 
 public interface Scalar<A> {
 
-  public static final Scalar<Long> int8 = Int8Scalar.instance;
-  public static final Scalar<String> text = TextScalar.instance;
-  public static final Scalar<java.time.LocalDate> localDate = LocalDateScalar.instance;
+  // Codecs named by their PostgreSQL type name.
+  
+  public static final Scalar<Long> INT8 = Int8Scalar.instance;
+  public static final Scalar<String> TEXT = TextScalar.instance;
+  public static final Scalar<java.time.LocalDate> DATE = LocalDateScalar.instance;
 
   String name();
 
