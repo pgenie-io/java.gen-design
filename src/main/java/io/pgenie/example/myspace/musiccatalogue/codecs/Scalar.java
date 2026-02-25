@@ -7,7 +7,7 @@ public interface Scalar<A> {
     // Codecs named by their PostgreSQL type name.
     public static final Scalar<Long> INT8 = Int8Scalar.instance;
     public static final Scalar<String> TEXT = TextScalar.instance;
-    public static final Scalar<java.time.LocalDate> DATE = LocalDateScalar.instance;
+    public static final Scalar<java.time.LocalDate> DATE = DateScalar.instance;
 
     String name();
 

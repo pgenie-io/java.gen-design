@@ -6,11 +6,11 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 
-final class LocalDateScalar implements Scalar<LocalDate> {
+final class DateScalar implements Scalar<LocalDate> {
 
-    static final LocalDateScalar instance = new LocalDateScalar();
+    static final DateScalar instance = new DateScalar();
 
-    private LocalDateScalar() {
+    private DateScalar() {
     }
 
     public String name() {
