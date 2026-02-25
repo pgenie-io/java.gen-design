@@ -3,7 +3,6 @@ package io.pgenie.example.myspace.musiccatalogue.types;
 import java.time.LocalDate;
 
 import io.pgenie.example.myspace.musiccatalogue.codecs.CompositeScalar;
-import io.pgenie.example.myspace.musiccatalogue.codecs.Field;
 import io.pgenie.example.myspace.musiccatalogue.codecs.Scalar;
 
 /**
@@ -32,9 +31,9 @@ public record RecordingInfo(
             "public", "recording_info",
             (String studioName) -> (String city) -> (String country) -> (LocalDate recordedDate) -> new RecordingInfo(
                     studioName, city, country, recordedDate),
-            new Field<>("studio_name", RecordingInfo::studioName, Scalar.TEXT),
-            new Field<>("city", RecordingInfo::city, Scalar.TEXT),
-            new Field<>("country", RecordingInfo::country, Scalar.TEXT),
-            new Field<>("recorded_date", RecordingInfo::recordedDate, Scalar.DATE));
+            new CompositeScalar.Field<>("studio_name", RecordingInfo::studioName, Scalar.TEXT),
+            new CompositeScalar.Field<>("city", RecordingInfo::city, Scalar.TEXT),
+            new CompositeScalar.Field<>("country", RecordingInfo::country, Scalar.TEXT),
+            new CompositeScalar.Field<>("recorded_date", RecordingInfo::recordedDate, Scalar.DATE));
 
 }

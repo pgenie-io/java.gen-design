@@ -231,4 +231,18 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
         return fields;
     }
 
+    public static final class Field<Z, A> {
+
+        public final String name;
+        public final Function<Z, A> accessor;
+        public final Scalar<A> codec;
+
+        public Field(String name, Function<Z, A> accessor, Scalar<A> codec) {
+            this.name = name;
+            this.accessor = accessor;
+            this.codec = codec;
+        }
+
+    }
+
 }
