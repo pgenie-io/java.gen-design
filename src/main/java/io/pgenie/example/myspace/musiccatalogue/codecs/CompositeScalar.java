@@ -9,65 +9,65 @@ import org.postgresql.util.PGobject;
 
 import java.sql.PreparedStatement;
 
-public final class Composite<Z> implements Scalar<Z> {
+public final class CompositeScalar<Z> implements Scalar<Z> {
 
     private final String schema;
     private final String pgName;
     private final Object constructor;
-    private final CompositeField<Z, ?>[] fields;
+    private final Field<Z, ?>[] fields;
 
     @SuppressWarnings("unchecked")
-    public <A, B> Composite(
+    public <A, B> CompositeScalar(
             String schema, String name,
             Function<A, Function<B, Z>> construct,
-            CompositeField<Z, A> fieldA,
-            CompositeField<Z, B> fieldB) {
+            Field<Z, A> fieldA,
+            Field<Z, B> fieldB) {
         this.schema = schema;
         this.pgName = name;
         this.constructor = construct;
-        this.fields = new CompositeField[]{fieldA, fieldB};
+        this.fields = new Field[]{fieldA, fieldB};
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C> Composite(
+    public <A, B, C> CompositeScalar(
             String schema, String name,
             Function<A, Function<B, Function<C, Z>>> construct,
-            CompositeField<Z, A> fieldA,
-            CompositeField<Z, B> fieldB,
-            CompositeField<Z, C> fieldC) {
+            Field<Z, A> fieldA,
+            Field<Z, B> fieldB,
+            Field<Z, C> fieldC) {
         this.schema = schema;
         this.pgName = name;
         this.constructor = construct;
-        this.fields = new CompositeField[]{fieldA, fieldB, fieldC};
+        this.fields = new Field[]{fieldA, fieldB, fieldC};
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C, D> Composite(
+    public <A, B, C, D> CompositeScalar(
             String schema, String name,
             Function<A, Function<B, Function<C, Function<D, Z>>>> construct,
-            CompositeField<Z, A> fieldA,
-            CompositeField<Z, B> fieldB,
-            CompositeField<Z, C> fieldC,
-            CompositeField<Z, D> fieldD) {
+            Field<Z, A> fieldA,
+            Field<Z, B> fieldB,
+            Field<Z, C> fieldC,
+            Field<Z, D> fieldD) {
         this.schema = schema;
         this.pgName = name;
         this.constructor = construct;
-        this.fields = new CompositeField[]{fieldA, fieldB, fieldC, fieldD};
+        this.fields = new Field[]{fieldA, fieldB, fieldC, fieldD};
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C, D, E> Composite(
+    public <A, B, C, D, E> CompositeScalar(
             String schema, String name,
             Function<A, Function<B, Function<C, Function<D, Function<E, Z>>>>> construct,
-            CompositeField<Z, A> fieldA,
-            CompositeField<Z, B> fieldB,
-            CompositeField<Z, C> fieldC,
-            CompositeField<Z, D> fieldD,
-            CompositeField<Z, E> fieldE) {
+            Field<Z, A> fieldA,
+            Field<Z, B> fieldB,
+            Field<Z, C> fieldC,
+            Field<Z, D> fieldD,
+            Field<Z, E> fieldE) {
         this.schema = schema;
         this.pgName = name;
         this.constructor = construct;
-        this.fields = new CompositeField[]{fieldA, fieldB, fieldC, fieldD, fieldE};
+        this.fields = new Field[]{fieldA, fieldB, fieldC, fieldD, fieldE};
     }
 
     @Override
@@ -83,7 +83,7 @@ public final class Composite<Z> implements Scalar<Z> {
             if (i > 0) {
                 sb.append(',');
             }
-            var field = (CompositeField<Z, Object>) fields[i];
+            var field = (Field<Z, Object>) fields[i];
             Object fieldValue = field.accessor.apply(value);
             if (fieldValue != null) {
                 var fieldSb = new StringBuilder();

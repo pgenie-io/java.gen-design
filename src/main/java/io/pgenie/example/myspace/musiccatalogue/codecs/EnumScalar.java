@@ -7,14 +7,14 @@ import java.util.Map;
 
 import org.postgresql.util.PGobject;
 
-public final class Enum<E> implements Scalar<E> {
+public final class EnumScalar<E> implements Scalar<E> {
 
     private final String schema;
     private final String pgName;
     private final Map<E, String> pgLabels;
     private final Map<String, E> byPgLabel;
 
-    public Enum(String schema, String name, Map<E, String> pgLabels) {
+    public EnumScalar(String schema, String name, Map<E, String> pgLabels) {
         this.schema = schema;
         this.pgName = name;
         this.pgLabels = pgLabels;
