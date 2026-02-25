@@ -104,9 +104,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
                     ? AlbumFormat.fromPgValue(formatStr)
                     : null;
             String recordingStr = rs.getString(5);
-            RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr)
-                    : null;
+            RecordingInfo recording =  RecordingInfo.codec.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;

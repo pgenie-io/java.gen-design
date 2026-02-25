@@ -82,7 +82,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, RecordingInfo.toPgObject(this.recording()));
+        ps.setObject(1, RecordingInfo.codec.toPgObject(this.recording()));
         if (this.id() != null) {
             ps.setLong(2, this.id());
         } else {
@@ -108,9 +108,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
                     ? AlbumFormat.fromPgValue(formatStr)
                     : null;
             String recordingStr = rs.getString(5);
-            RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr)
-                    : null;
+            RecordingInfo recording = RecordingInfo.codec.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;
