@@ -82,7 +82,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, RecordingInfo.codec.toPgObject(this.recording()));
+        RecordingInfo.codec.bind(ps, 1, this.recording());
         if (this.id() != null) {
             ps.setLong(2, this.id());
         } else {

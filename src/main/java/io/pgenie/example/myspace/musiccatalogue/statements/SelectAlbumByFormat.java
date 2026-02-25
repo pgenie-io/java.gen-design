@@ -83,7 +83,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, AlbumFormat.codec.toPgObject(this.format()));
+        AlbumFormat.codec.bind(ps, 1, this.format());
     }
 
     @Override

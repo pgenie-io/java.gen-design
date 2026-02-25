@@ -2,6 +2,7 @@ package io.pgenie.example.myspace.musiccatalogue.codecs;
 
 import org.postgresql.util.PGobject;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,13 +45,14 @@ public final class Enum<E> implements Scalar<E> {
     return value;
   }
 
-  public PGobject toPgObject(E value) throws SQLException {
-    var obj = new PGobject();
+  @Override
+  public void bind(PreparedStatement ps, int index, E value) throws SQLException {
+    PGobject obj = new PGobject();
     obj.setType(pgName);
     if (value != null) {
       obj.setValue(pgLabels.get(value));
     }
-    return obj;
+    ps.setObject(index, obj);
   }
 
 }

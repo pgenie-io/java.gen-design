@@ -1,5 +1,7 @@
 package io.pgenie.example.myspace.musiccatalogue.codecs;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.function.Function;
 
 public final class MappedScalar<A, B> implements Scalar<B> {
@@ -16,6 +18,11 @@ public final class MappedScalar<A, B> implements Scalar<B> {
 
   public String name() {
     return codec.name();
+  }
+
+  @Override
+  public void bind(PreparedStatement ps, int index, B value) throws SQLException {
+    codec.bind(ps, index, fromMapped.apply(value));
   }
 
   public void write(StringBuilder sb, B value) {

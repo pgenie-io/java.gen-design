@@ -70,8 +70,8 @@ public record InsertAlbum(
         } else {
             ps.setNull(2, Types.DATE);
         }
-        ps.setObject(3, AlbumFormat.codec.toPgObject(this.format()));
-        ps.setObject(4, RecordingInfo.codec.toPgObject(this.recording()));
+        AlbumFormat.codec.bind(ps, 3, this.format());
+        RecordingInfo.codec.bind(ps, 4, this.recording());
     }
 
     @Override

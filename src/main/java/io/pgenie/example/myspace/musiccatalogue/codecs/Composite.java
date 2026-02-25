@@ -9,6 +9,8 @@ import org.postgresql.util.PGobject;
 
 import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
+import java.sql.PreparedStatement;
+
 public final class Composite<Z> implements Scalar<Z> {
 
   private final String schema;
@@ -98,15 +100,16 @@ public final class Composite<Z> implements Scalar<Z> {
     return (Z) fn;
   }
 
-  public PGobject toPgObject(Z value) throws SQLException {
-    var obj = new PGobject();
+  @Override
+  public void bind(PreparedStatement ps, int index, Z value) throws SQLException {
+    PGobject obj = new PGobject();
     obj.setType(this.name());
     if (value != null) {
       var sb = new StringBuilder();
       this.write(sb, value);
       obj.setValue(sb.toString());
     }
-    return obj;
+    ps.setObject(index, obj);
   }
 
   // ---------------------------------------------------------------------------
