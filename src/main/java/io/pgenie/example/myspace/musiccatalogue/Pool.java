@@ -103,6 +103,16 @@ public final class Pool implements AutoCloseable {
     }
 
     /**
+     * Execute a SQL script without parameters and producing no result. Useful
+     * for schema setup and teardown in tests.
+     */
+    public void execute(String sql) throws SQLException {
+        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.execute();
+        }
+    }
+
+    /**
      * Execute a transaction, retrying automatically if it aborts due to a
      * serialisation failure (SQLState {@code 40001}) or deadlock (SQLState
      * {@code 40P01}).
