@@ -2,6 +2,8 @@ package io.pgenie.example.myspace.musiccatalogue.types;
 
 import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
 
+import java.util.Map;
+
 /**
  * Representation of the {@code album_format} user-declared PostgreSQL
  * enumeration type.
@@ -13,32 +15,26 @@ import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
 public enum AlbumFormat {
 
     /** Corresponds to the PostgreSQL enum variant {@code Vinyl}. */
-    VINYL("Vinyl"),
+    VINYL,
     /** Corresponds to the PostgreSQL enum variant {@code CD}. */
-    CD("CD"),
+    CD,
     /** Corresponds to the PostgreSQL enum variant {@code Cassette}. */
-    CASSETTE("Cassette"),
+    CASSETTE,
     /** Corresponds to the PostgreSQL enum variant {@code Digital}. */
-    DIGITAL("Digital"),
+    DIGITAL,
     /** Corresponds to the PostgreSQL enum variant {@code DVD-Audio}. */
-    DVD_AUDIO("DVD-Audio"),
+    DVD_AUDIO,
     /** Corresponds to the PostgreSQL enum variant {@code SACD}. */
-    SACD("SACD");
-
-    private final String pgValue;
-
-    AlbumFormat(String pgValue) {
-        this.pgValue = pgValue;
-    }
-
-    /** The PostgreSQL enum label string for this variant. */
-    public String pgValue() {
-        return pgValue;
-    }
+    SACD;
 
     public static final Enum<AlbumFormat> codec = new Enum<>(
-            "public", "album_format",
-            AlbumFormat.values(),
-            AlbumFormat::pgValue);
+        "public", "album_format",
+        Map.ofEntries(
+            Map.entry(VINYL, "Vinyl"),
+            Map.entry(CD, "CD"),
+            Map.entry(CASSETTE, "Cassette"),
+            Map.entry(DIGITAL, "Digital"),
+            Map.entry(DVD_AUDIO, "DVD-Audio"),
+            Map.entry(SACD, "SACD")));
 
 }

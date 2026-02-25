@@ -5,23 +5,20 @@ import org.postgresql.util.PGobject;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 public final class Enum<E> implements Scalar<E> {
 
   private final String schema;
   private final String pgName;
-  private final Function<E, String> pgLabel;
+  private final Map<E, String> pgLabels;
   private final Map<String, E> byPgLabel;
 
-  public Enum(String schema, String name, E[] constants, Function<E, String> pgLabel) {
+  public Enum(String schema, String name, Map<E, String> pgLabels) {
     this.schema = schema;
     this.pgName = name;
-    this.pgLabel = pgLabel;
-    this.byPgLabel = new HashMap<>(constants.length * 2);
-    for (E constant : constants) {
-      byPgLabel.put(pgLabel.apply(constant), constant);
-    }
+    this.pgLabels = pgLabels;
+    this.byPgLabel = new HashMap<>(pgLabels.size() * 2);
+    pgLabels.forEach((constant, label) -> byPgLabel.put(label, constant));
   }
 
   @Override
@@ -31,7 +28,7 @@ public final class Enum<E> implements Scalar<E> {
 
   @Override
   public void write(StringBuilder sb, E value) {
-    sb.append(pgLabel.apply(value));
+    sb.append(pgLabels.get(value));
   }
 
   @Override
@@ -51,7 +48,7 @@ public final class Enum<E> implements Scalar<E> {
     var obj = new PGobject();
     obj.setType(pgName);
     if (value != null) {
-      obj.setValue(pgLabel.apply(value));
+      obj.setValue(pgLabels.get(value));
     }
     return obj;
   }
