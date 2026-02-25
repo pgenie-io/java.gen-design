@@ -15,7 +15,7 @@ import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
  * Type-safe binding for the {@code select_album_by_format} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * select
  *   id,
@@ -27,8 +27,7 @@ import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
  * where format = $format
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/select_album_by_format.sql}
+ * <h2>Source Path</h2> {@code ./queries/select_album_by_format.sql}
  *
  * <p>
  * Generated from SQL queries using the
@@ -42,31 +41,45 @@ public record SelectAlbumByFormat(AlbumFormat format)
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-
-    /** Result of the statement parameterised by {@link SelectAlbumByFormat}. */
+    /**
+     * Result of the statement parameterised by {@link SelectAlbumByFormat}.
+     */
     public static final class Output extends ArrayList<OutputRow> {
+
         Output() {
         }
     }
 
-    /** Row of {@link Output}. */
+    /**
+     * Row of {@link Output}.
+     */
     public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
+            /**
+             * Maps to the {@code id} result-set column.
+             */
             long id,
-            /** Maps to the {@code name} result-set column. */
+            /**
+             * Maps to the {@code name} result-set column.
+             */
             String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
+            /**
+             * Maps to the {@code released} result-set column. Nullable.
+             */
             LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
+            /**
+             * Maps to the {@code format} result-set column. Nullable.
+             */
             AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
+            /**
+             * Maps to the {@code recording} result-set column. Nullable.
+             */
             RecordingInfo recording) {
+
     }
 
     // -------------------------------------------------------------------------
     // Statement implementation
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """
@@ -101,7 +114,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
             String formatStr = rs.getString(4);
             AlbumFormat format = AlbumFormat.CODEC.parse(formatStr);
             String recordingStr = rs.getString(5);
-            RecordingInfo recording =  RecordingInfo.CODEC.parse(recordingStr);
+            RecordingInfo recording = RecordingInfo.CODEC.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;

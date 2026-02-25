@@ -1,9 +1,5 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.Statement;
-import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
-import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,27 +7,30 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 
+import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
+import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
+
 /**
  * Type-safe binding for the {@code insert_album} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * insert into album (name, released, format, recording)
  * values ($name, $released, $format, $recording)
  * returning id
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/insert_album.sql}
+ * <h2>Source Path</h2> {@code ./queries/insert_album.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
- * 
- * @param name      Maps to {@code $name} in the template. Non-null.
- * @param released  Maps to {@code $released} in the template. Nullable.
- * @param format    Maps to {@code $format} in the template. Nullable.
+ *
+ * @param name Maps to {@code $name} in the template. Non-null.
+ * @param released Maps to {@code $released} in the template. Nullable.
+ * @param format Maps to {@code $format} in the template. Nullable.
  * @param recording Maps to {@code $recording} in the template. Nullable.
  */
 public record InsertAlbum(
@@ -43,17 +42,20 @@ public record InsertAlbum(
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-
-    /** Result of the statement parameterised by {@link Input}. */
+    /**
+     * Result of the statement parameterised by {@link Input}.
+     */
     public record Output(
-            /** Maps to the {@code id} result-set column. */
+            /**
+             * Maps to the {@code id} result-set column.
+             */
             long id) {
+
     }
 
     // -------------------------------------------------------------------------
     // Statement implementation
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """

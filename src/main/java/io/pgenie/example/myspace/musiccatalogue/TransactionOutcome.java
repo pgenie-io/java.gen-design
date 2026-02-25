@@ -5,8 +5,8 @@ package io.pgenie.example.myspace.musiccatalogue;
  * flag indicating whether the transaction should be committed or rolled back.
  *
  * <p>
- * Use the factory methods {@link #commit(Object)} and
- * {@link #rollback(Object)} to construct instances.
+ * Use the factory methods {@link #commit(Object)} and {@link #rollback(Object)}
+ * to construct instances.
  *
  * @param <R> the result type
  */
@@ -20,24 +20,30 @@ public final class TransactionOutcome<R> {
         this.commit = commit;
     }
 
-    /** Commit the transaction and return {@code result}. */
+    /**
+     * Commit the transaction and return {@code result}.
+     */
     public static <R> TransactionOutcome<R> commit(R result) {
         return new TransactionOutcome<>(result, true);
     }
 
-    /** Roll back the transaction and return {@code result}. */
+    /**
+     * Roll back the transaction and return {@code result}.
+     */
     public static <R> TransactionOutcome<R> rollback(R result) {
         return new TransactionOutcome<>(result, false);
     }
 
-    /** The result value produced by the transaction body. */
+    /**
+     * The result value produced by the transaction body.
+     */
     public R result() {
         return result;
     }
 
     /**
-     * {@code true} if the transaction should be committed, {@code false} to roll
-     * back.
+     * {@code true} if the transaction should be committed, {@code false} to
+     * roll back.
      */
     public boolean shouldCommit() {
         return commit;

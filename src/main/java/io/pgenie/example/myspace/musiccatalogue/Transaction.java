@@ -6,17 +6,16 @@ import java.sql.SQLException;
  * User-defined transaction logic executed by {@link Pool#transact}.
  *
  * <p>
- * Implement this interface to define a unit of work that runs inside a
- * database transaction. The {@link #run} method receives a
- * {@link TransactionContext} for executing statements and returns a
- * {@link TransactionOutcome} that carries both the result and a
- * commit-or-rollback decision.
+ * Implement this interface to define a unit of work that runs inside a database
+ * transaction. The {@link #run} method receives a {@link TransactionContext}
+ * for executing statements and returns a {@link TransactionOutcome} that
+ * carries both the result and a commit-or-rollback decision.
  *
  * <p>
  * Override {@link #isolationLevel()}, {@link #readOnly()}, or
- * {@link #deferrable()} to customise transaction characteristics. The
- * defaults mirror PostgreSQL's session defaults ({@code READ COMMITTED},
- * read-write, non-deferrable).
+ * {@link #deferrable()} to customise transaction characteristics. The defaults
+ * mirror PostgreSQL's session defaults ({@code READ COMMITTED}, read-write,
+ * non-deferrable).
  *
  * @param <R> the result type produced by the transaction
  */
@@ -30,7 +29,9 @@ public interface Transaction<R> {
         return IsolationLevel.READ_COMMITTED;
     }
 
-    /** Whether the transaction is read-only. Defaults to {@code false}. */
+    /**
+     * Whether the transaction is read-only. Defaults to {@code false}.
+     */
     default boolean readOnly() {
         return false;
     }

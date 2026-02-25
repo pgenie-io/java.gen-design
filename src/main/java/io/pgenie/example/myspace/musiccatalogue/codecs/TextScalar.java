@@ -5,25 +5,26 @@ import java.sql.SQLException;
 
 final class TextScalar implements Scalar<String> {
 
-  static final TextScalar instance = new TextScalar();
+    static final TextScalar instance = new TextScalar();
 
-  private TextScalar() {}
+    private TextScalar() {
+    }
 
-  public String name() {
-    return "text";
-  }
+    public String name() {
+        return "text";
+    }
 
-  @Override
-  public void bind(PreparedStatement ps, int index, String value) throws SQLException {
-    ps.setString(index, value);
-  }
+    @Override
+    public void bind(PreparedStatement ps, int index, String value) throws SQLException {
+        ps.setString(index, value);
+    }
 
-  public void write(StringBuilder sb, String value) {
-    sb.append(value);
-  }
+    public void write(StringBuilder sb, String value) {
+        sb.append(value);
+    }
 
-  public String parse(CharSequence text) {
-    return text.toString();
-  }
+    public String parse(CharSequence text) {
+        return text.toString();
+    }
 
 }

@@ -17,9 +17,9 @@ import io.pgenie.example.myspace.musiccatalogue.codecs.Scalar;
  * <p>
  * All fields are nullable, matching the PostgreSQL column definitions.
  *
- * @param studioName   Maps to {@code studio_name}.
- * @param city         Maps to {@code city}.
- * @param country      Maps to {@code country}.
+ * @param studioName Maps to {@code studio_name}.
+ * @param city Maps to {@code city}.
+ * @param country Maps to {@code country}.
  * @param recordedDate Maps to {@code recorded_date}.
  */
 public record RecordingInfo(

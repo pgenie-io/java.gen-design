@@ -1,15 +1,14 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.AbstractDatabaseIT;
-import io.pgenie.example.myspace.musiccatalogue.statements.InsertAlbum;
-import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
-import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
-import org.junit.jupiter.api.Test;
-
 import java.sql.SQLException;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import io.pgenie.example.myspace.musiccatalogue.AbstractDatabaseIT;
+import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
+import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
 class InsertAlbumIT extends AbstractDatabaseIT {
 

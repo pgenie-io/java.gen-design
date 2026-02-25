@@ -14,27 +14,39 @@ import io.pgenie.example.myspace.musiccatalogue.codecs.Enum;
  */
 public enum AlbumFormat {
 
-    /** Corresponds to the PostgreSQL enum variant {@code Vinyl}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code Vinyl}.
+     */
     VINYL,
-    /** Corresponds to the PostgreSQL enum variant {@code CD}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code CD}.
+     */
     CD,
-    /** Corresponds to the PostgreSQL enum variant {@code Cassette}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code Cassette}.
+     */
     CASSETTE,
-    /** Corresponds to the PostgreSQL enum variant {@code Digital}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code Digital}.
+     */
     DIGITAL,
-    /** Corresponds to the PostgreSQL enum variant {@code DVD-Audio}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code DVD-Audio}.
+     */
     DVD_AUDIO,
-    /** Corresponds to the PostgreSQL enum variant {@code SACD}. */
+    /**
+     * Corresponds to the PostgreSQL enum variant {@code SACD}.
+     */
     SACD;
 
     public static final Enum<AlbumFormat> CODEC = new Enum<>(
-        "public", "album_format",
-        Map.ofEntries(
-            Map.entry(VINYL, "Vinyl"),
-            Map.entry(CD, "CD"),
-            Map.entry(CASSETTE, "Cassette"),
-            Map.entry(DIGITAL, "Digital"),
-            Map.entry(DVD_AUDIO, "DVD-Audio"),
-            Map.entry(SACD, "SACD")));
+            "public", "album_format",
+            Map.ofEntries(
+                    Map.entry(VINYL, "Vinyl"),
+                    Map.entry(CD, "CD"),
+                    Map.entry(CASSETTE, "Cassette"),
+                    Map.entry(DIGITAL, "Digital"),
+                    Map.entry(DVD_AUDIO, "DVD-Audio"),
+                    Map.entry(SACD, "SACD")));
 
 }

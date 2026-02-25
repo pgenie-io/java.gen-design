@@ -16,7 +16,7 @@ import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
  * Type-safe binding for the {@code update_album_recording_returning} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * -- Update album recording information
  * update album
@@ -25,15 +25,14 @@ import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
  * returning *
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/update_album_recording_returning.sql}
+ * <h2>Source Path</h2> {@code ./queries/update_album_recording_returning.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param recording Maps to {@code $recording} in the template. Nullable.
- * @param id        Maps to {@code $id} in the template. Nullable.
+ * @param id Maps to {@code $id} in the template. Nullable.
  */
 public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
         implements Statement<UpdateAlbumRecordingReturning.Output> {
@@ -41,34 +40,46 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-
     /**
      * Result of the statement parameterised by
      * {@link UpdateAlbumRecordingReturning}.
      */
     public static final class Output extends ArrayList<OutputRow> {
+
         Output() {
         }
     }
 
-    /** Row of {@link Output}. */
+    /**
+     * Row of {@link Output}.
+     */
     public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
+            /**
+             * Maps to the {@code id} result-set column.
+             */
             long id,
-            /** Maps to the {@code name} result-set column. */
+            /**
+             * Maps to the {@code name} result-set column.
+             */
             String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
+            /**
+             * Maps to the {@code released} result-set column. Nullable.
+             */
             LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
+            /**
+             * Maps to the {@code format} result-set column. Nullable.
+             */
             AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
+            /**
+             * Maps to the {@code recording} result-set column. Nullable.
+             */
             RecordingInfo recording) {
+
     }
 
     // -------------------------------------------------------------------------
     // Statement implementation
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """
