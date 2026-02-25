@@ -22,8 +22,8 @@ public final class TransactionContext {
     }
 
     /**
-     * Execute a {@link Statement} within the current transaction and return
-     * its decoded result.
+     * Execute a {@link Statement} within the current transaction and return its
+     * decoded result.
      *
      * <p>
      * Follows the same {@link Statement#returnsRows()} branching as
