@@ -1,9 +1,5 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.Statement;
-import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
-import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,13 +7,16 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
+
+import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
+import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
 /**
  * Type-safe binding for the {@code update_album_recording_returning} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * -- Update album recording information
  * update album
@@ -26,15 +25,14 @@ import java.util.List;
  * returning *
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/update_album_recording_returning.sql}
+ * <h2>Source Path</h2> {@code ./queries/update_album_recording_returning.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param recording Maps to {@code $recording} in the template. Nullable.
- * @param id        Maps to {@code $id} in the template. Nullable.
+ * @param id Maps to {@code $id} in the template. Nullable.
  */
 public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
         implements Statement<UpdateAlbumRecordingReturning.Output> {
@@ -42,34 +40,46 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-
     /**
      * Result of the statement parameterised by
      * {@link UpdateAlbumRecordingReturning}.
      */
     public static final class Output extends ArrayList<OutputRow> {
+
         Output() {
         }
     }
 
-    /** Row of {@link Output}. */
+    /**
+     * Row of {@link Output}.
+     */
     public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
+            /**
+             * Maps to the {@code id} result-set column.
+             */
             long id,
-            /** Maps to the {@code name} result-set column. */
+            /**
+             * Maps to the {@code name} result-set column.
+             */
             String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
+            /**
+             * Maps to the {@code released} result-set column. Nullable.
+             */
             LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
+            /**
+             * Maps to the {@code format} result-set column. Nullable.
+             */
             AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
+            /**
+             * Maps to the {@code recording} result-set column. Nullable.
+             */
             RecordingInfo recording) {
+
     }
 
     // -------------------------------------------------------------------------
     // Statement implementation
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """
@@ -82,7 +92,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, RecordingInfo.toPgObject(this.recording()));
+        RecordingInfo.CODEC.bind(ps, 1, this.recording());
         if (this.id() != null) {
             ps.setLong(2, this.id());
         } else {
@@ -104,13 +114,9 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr)
-                    : null;
+            AlbumFormat format = AlbumFormat.CODEC.parse(formatStr);
             String recordingStr = rs.getString(5);
-            RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr)
-                    : null;
+            RecordingInfo recording = RecordingInfo.CODEC.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;

@@ -1,7 +1,5 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.Statement;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,26 +7,27 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 
+import io.pgenie.example.myspace.musiccatalogue.Statement;
+
 /**
  * Type-safe binding for the {@code update_album_released} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * update album
  * set released = $released
  * where id = $id
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/update_album_released.sql}
+ * <h2>Source Path</h2> {@code ./queries/update_album_released.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param released Maps to {@code $released} in the template. Nullable.
- * @param id       Maps to {@code $id} in the template. Nullable.
+ * @param id Maps to {@code $id} in the template. Nullable.
  */
 public record UpdateAlbumReleased(LocalDate released, Long id)
         implements Statement<Long> {
@@ -38,7 +37,6 @@ public record UpdateAlbumReleased(LocalDate released, Long id)
     //
     // Result type is Long — the number of rows affected by the update.
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """

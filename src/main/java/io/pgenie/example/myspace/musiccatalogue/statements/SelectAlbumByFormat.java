@@ -1,22 +1,21 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
-import io.pgenie.example.myspace.musiccatalogue.Statement;
-import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
-import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.List;
+
+import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
+import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
 /**
  * Type-safe binding for the {@code select_album_by_format} query.
  *
  * <h2>SQL Template</h2>
- * 
+ *
  * <pre>{@code
  * select
  *   id,
@@ -28,8 +27,7 @@ import java.util.List;
  * where format = $format
  * }</pre>
  *
- * <h2>Source Path</h2>
- * {@code ./queries/select_album_by_format.sql}
+ * <h2>Source Path</h2> {@code ./queries/select_album_by_format.sql}
  *
  * <p>
  * Generated from SQL queries using the
@@ -43,31 +41,45 @@ public record SelectAlbumByFormat(AlbumFormat format)
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-
-    /** Result of the statement parameterised by {@link SelectAlbumByFormat}. */
+    /**
+     * Result of the statement parameterised by {@link SelectAlbumByFormat}.
+     */
     public static final class Output extends ArrayList<OutputRow> {
+
         Output() {
         }
     }
 
-    /** Row of {@link Output}. */
+    /**
+     * Row of {@link Output}.
+     */
     public record OutputRow(
-            /** Maps to the {@code id} result-set column. */
+            /**
+             * Maps to the {@code id} result-set column.
+             */
             long id,
-            /** Maps to the {@code name} result-set column. */
+            /**
+             * Maps to the {@code name} result-set column.
+             */
             String name,
-            /** Maps to the {@code released} result-set column. Nullable. */
+            /**
+             * Maps to the {@code released} result-set column. Nullable.
+             */
             LocalDate released,
-            /** Maps to the {@code format} result-set column. Nullable. */
+            /**
+             * Maps to the {@code format} result-set column. Nullable.
+             */
             AlbumFormat format,
-            /** Maps to the {@code recording} result-set column. Nullable. */
+            /**
+             * Maps to the {@code recording} result-set column. Nullable.
+             */
             RecordingInfo recording) {
+
     }
 
     // -------------------------------------------------------------------------
     // Statement implementation
     // -------------------------------------------------------------------------
-
     @Override
     public String sql() {
         return """
@@ -83,7 +95,7 @@ public record SelectAlbumByFormat(AlbumFormat format)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        ps.setObject(1, AlbumFormat.toPgObject(this.format()));
+        AlbumFormat.CODEC.bind(ps, 1, this.format());
     }
 
     @Override
@@ -100,13 +112,9 @@ public record SelectAlbumByFormat(AlbumFormat format)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = formatStr != null
-                    ? AlbumFormat.fromPgValue(formatStr)
-                    : null;
+            AlbumFormat format = AlbumFormat.CODEC.parse(formatStr);
             String recordingStr = rs.getString(5);
-            RecordingInfo recording = recordingStr != null
-                    ? RecordingInfo.parse(recordingStr)
-                    : null;
+            RecordingInfo recording = RecordingInfo.CODEC.parse(recordingStr);
             output.add(new OutputRow(id, name, released, format, recording));
         }
         return output;
