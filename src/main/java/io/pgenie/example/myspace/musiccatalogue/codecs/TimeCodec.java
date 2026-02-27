@@ -20,7 +20,7 @@ final class TimeCodec implements Codec<LocalTime> {
     @Override
     public void bind(PreparedStatement ps, int index, LocalTime value) throws SQLException {
         if (value != null) {
-            ps.setTime(index, Time.valueOf(value));
+            ps.setObject(index, value, Types.TIME);
         } else {
             ps.setNull(index, Types.TIME);
         }

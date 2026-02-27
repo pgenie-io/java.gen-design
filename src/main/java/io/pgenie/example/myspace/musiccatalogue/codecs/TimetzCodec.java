@@ -2,10 +2,11 @@ package io.pgenie.example.myspace.musiccatalogue.codecs;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.time.OffsetTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+
+import org.postgresql.util.PGobject;
 
 final class TimetzCodec implements Codec<OffsetTime> {
 
@@ -20,11 +21,12 @@ final class TimetzCodec implements Codec<OffsetTime> {
 
     @Override
     public void bind(PreparedStatement ps, int index, OffsetTime value) throws SQLException {
+        PGobject obj = new PGobject();
+        obj.setType("timetz");
         if (value != null) {
-            ps.setObject(index, value, Types.TIME_WITH_TIMEZONE);
-        } else {
-            ps.setNull(index, Types.TIME_WITH_TIMEZONE);
+            obj.setValue(value.toString());
         }
+        ps.setObject(index, obj);
     }
 
     public void write(StringBuilder sb, OffsetTime value) {
