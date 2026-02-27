@@ -10,9 +10,42 @@ import java.sql.PreparedStatement;
 public interface Codec<A> {
 
     // Codecs named by their PostgreSQL type name.
+    public static final Codec<Boolean> BOOL = BoolCodec.instance;
+    public static final Codec<Short> INT2 = Int2Codec.instance;
+    public static final Codec<Integer> INT4 = Int4Codec.instance;
     public static final Codec<Long> INT8 = Int8Codec.instance;
+    public static final Codec<Float> FLOAT4 = Float4Codec.instance;
+    public static final Codec<Double> FLOAT8 = Float8Codec.instance;
+    public static final Codec<java.math.BigDecimal> NUMERIC = NumericCodec.instance;
     public static final Codec<String> TEXT = TextCodec.instance;
+    public static final Codec<String> CHAR = CharCodec.instance;
+    public static final Codec<String> VARCHAR = VarcharCodec.instance;
+    public static final Codec<byte[]> BYTEA = ByteaCodec.instance;
     public static final Codec<java.time.LocalDate> DATE = DateCodec.instance;
+    public static final Codec<java.time.LocalTime> TIME = TimeCodec.instance;
+    public static final Codec<java.time.OffsetTime> TIMETZ = TimetzCodec.instance;
+    public static final Codec<java.time.LocalDateTime> TIMESTAMP = TimestampCodec.instance;
+    public static final Codec<java.time.OffsetDateTime> TIMESTAMPTZ = TimestamptzCodec.instance;
+    public static final Codec<String> INTERVAL = IntervalCodec.instance;
+    public static final Codec<java.util.UUID> UUID = UuidCodec.instance;
+    public static final Codec<String> JSON = JsonCodec.instance;
+    public static final Codec<String> JSONB = JsonbCodec.instance;
+    public static final Codec<Long> OID = OidCodec.instance;
+    public static final Codec<String> MONEY = MoneyCodec.instance;
+    public static final Codec<String> INET = InetCodec.instance;
+    public static final Codec<String> CIDR = CidrCodec.instance;
+    public static final Codec<String> MACADDR = MacaddrCodec.instance;
+    public static final Codec<String> MACADDR8 = Macaddr8Codec.instance;
+    public static final Codec<org.postgresql.geometric.PGpoint> POINT = PointCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGline> LINE = LineCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGlseg> LSEG = LsegCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGbox> BOX = BoxCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGpath> PATH = PathCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGpolygon> POLYGON = PolygonCodec.instance;
+    public static final Codec<org.postgresql.geometric.PGcircle> CIRCLE = CircleCodec.instance;
+    public static final Codec<String> BIT = BitCodec.instance;
+    public static final Codec<String> VARBIT = VarbitCodec.instance;
+    public static final Codec<String> TSVECTOR = TsvectorCodec.instance;
 
     String name();
 

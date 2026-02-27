@@ -155,6 +155,34 @@ public final class CompositeCodec<Z> implements Codec<Z> {
         return new Codec.ParsingResult<>((Z) fn, i + 1);
     }
 
+    /**
+     * Writes the value in {@code row(...)} syntax, which handles nested
+     * composites better than the quoted-literal form.
+     */
+    @SuppressWarnings("unchecked")
+    public void writeAsRow(StringBuilder sb, Z value) {
+        sb.append("row(");
+        for (int i = 0; i < fields.length; i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            var field = (Field<Z, Object>) fields[i];
+            Object fieldValue = field.accessor.apply(value);
+            if (fieldValue == null) {
+                sb.append("null");
+            } else if (field.codec instanceof CompositeCodec<?> compositeCodec) {
+                @SuppressWarnings("rawtypes")
+                var cc = (CompositeCodec) compositeCodec;
+                cc.writeAsRow(sb, fieldValue);
+            } else {
+                var fieldSb = new StringBuilder();
+                field.codec.write(fieldSb, fieldValue);
+                writeRowLiteral(sb, fieldSb);
+            }
+        }
+        sb.append(')');
+    }
+
     @Override
     public void bind(PreparedStatement ps, int index, Z value) throws SQLException {
         PGobject obj = new PGobject();
@@ -201,6 +229,24 @@ public final class CompositeCodec<Z> implements Codec<Z> {
             }
         }
         sb.append('"');
+    }
+
+    /**
+     * Writes a scalar literal in the row(...) syntax context. Single-quotes
+     * the value and escapes embedded single quotes by doubling them.
+     */
+    private static void writeRowLiteral(StringBuilder sb, StringBuilder fieldText) {
+        sb.append('\'');
+        int len = fieldText.length();
+        for (int i = 0; i < len; i++) {
+            char c = fieldText.charAt(i);
+            if (c == '\'') {
+                sb.append("''");
+            } else {
+                sb.append(c);
+            }
+        }
+        sb.append('\'');
     }
 
     public static final class Field<Z, A> {
