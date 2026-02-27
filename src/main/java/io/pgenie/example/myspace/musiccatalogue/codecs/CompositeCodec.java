@@ -1,13 +1,10 @@
 package io.pgenie.example.myspace.musiccatalogue.codecs;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Function;
 
 import org.postgresql.util.PGobject;
-
-import java.sql.PreparedStatement;
 
 public final class CompositeCodec<Z> implements Codec<Z> {
 
@@ -95,23 +92,72 @@ public final class CompositeCodec<Z> implements Codec<Z> {
     }
 
     @Override
-    public Z parse(CharSequence text) {
-        if (text == null) {
-            return null;
+    @SuppressWarnings("unchecked")
+    public Codec.ParsingResult<Z> parse(char[] input, int offset) throws Codec.ParseException {
+        int len = input.length;
+        if (offset >= len || input[offset] != '(') {
+            throw new Codec.ParseException(input, offset, "Expected '(' to open composite " + pgName);
         }
-        var rawFields = parseRawFields(text);
-        if (rawFields.size() != fields.length) {
-            throw new IllegalArgumentException(
-                    "Expected " + fields.length + " fields in " + pgName + " composite, got "
-                    + rawFields.size() + ": " + text);
-        }
+        int i = offset + 1; // skip '('
         Object fn = constructor;
-        for (int i = 0; i < fields.length; i++) {
-            CharSequence raw = rawFields.get(i);
-            Object fieldValue = raw != null ? fields[i].codec.parse(raw) : null;
-            fn = ((Function<Object, Object>) fn).apply(fieldValue);
+        for (int fieldIdx = 0; fieldIdx < fields.length; fieldIdx++) {
+            if (fieldIdx > 0) {
+                if (i >= len || input[i] != ',') {
+                    throw new Codec.ParseException(input, i, "Expected ',' between fields in composite " + pgName);
+                }
+                i++; // skip ','
+            }
+            if (i >= len || input[i] == ',' || input[i] == ')') {
+                // NULL field
+                fn = ((Function<Object, Object>) fn).apply(null);
+            } else if (input[i] == '"') {
+                // Quoted field — unescape into a fresh char[]
+                i++; // skip opening '"'
+                var sb = new StringBuilder();
+                while (i < len) {
+                    char c = input[i];
+                    if (c == '"') {
+                        if (i + 1 < len && input[i + 1] == '"') {
+                            sb.append('"');
+                            i += 2;
+                        } else {
+                            i++; // skip closing '"'
+                            break;
+                        }
+                    } else if (c == '\\') {
+                        if (i + 1 < len) {
+                            sb.append(input[i + 1]);
+                            i += 2;
+                        } else {
+                            sb.append(c);
+                            i++;
+                        }
+                    } else {
+                        sb.append(c);
+                        i++;
+                    }
+                }
+                char[] fieldChars = new char[sb.length()];
+                sb.getChars(0, sb.length(), fieldChars, 0);
+                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(fieldChars, 0);
+                fn = ((Function<Object, Object>) fn).apply(result.value);
+            } else {
+                // Unquoted field — find the end boundary then pass a bounded slice
+                int fieldStart = i;
+                while (i < len && input[i] != ',' && input[i] != ')') {
+                    i++;
+                }
+                int fieldLen = i - fieldStart;
+                char[] fieldChars = new char[fieldLen];
+                System.arraycopy(input, fieldStart, fieldChars, 0, fieldLen);
+                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(fieldChars, 0);
+                fn = ((Function<Object, Object>) fn).apply(result.value);
+            }
         }
-        return (Z) fn;
+        if (i >= len || input[i] != ')') {
+            throw new Codec.ParseException(input, i, "Expected ')' to close composite " + pgName);
+        }
+        return new Codec.ParsingResult<>((Z) fn, i + 1);
     }
 
     @Override
@@ -160,75 +206,6 @@ public final class CompositeCodec<Z> implements Codec<Z> {
             }
         }
         sb.append('"');
-    }
-
-    private static List<CharSequence> parseRawFields(CharSequence text) {
-        int len = text.length();
-        if (len < 2 || text.charAt(0) != '(' || text.charAt(len - 1) != ')') {
-            throw new IllegalArgumentException(
-                    "Composite literal must be wrapped in parentheses: " + text);
-        }
-        var fields = new ArrayList<CharSequence>();
-        int i = 1;
-        int end = len - 1;
-        if (i == end) {
-            return fields;
-        }
-        while (true) {
-            if (i >= end) {
-                fields.add(null); // trailing comma → NULL field
-                break;
-            }
-            char c = text.charAt(i);
-            if (c == '"') {
-                var sb = new StringBuilder();
-                i++; // skip opening quote
-                while (i < end) {
-                    char q = text.charAt(i);
-                    if (q == '"') {
-                        if (i + 1 < end && text.charAt(i + 1) == '"') {
-                            sb.append('"');
-                            i += 2;
-                        } else {
-                            i++;
-                            break;
-                        }
-                    } else if (q == '\\') {
-                        if (i + 1 < end) {
-                            sb.append(text.charAt(i + 1));
-                            i += 2;
-                        } else {
-                            sb.append(q);
-                            i++;
-                        }
-                    } else {
-                        sb.append(q);
-                        i++;
-                    }
-                }
-                fields.add(sb);
-                if (i < end && text.charAt(i) == ',') {
-                    i++;
-                } else {
-                    break;
-                }
-            } else if (c == ',') {
-                fields.add(null); // unquoted empty token → NULL
-                i++;
-            } else {
-                var sb = new StringBuilder();
-                while (i < end && text.charAt(i) != ',') {
-                    sb.append(text.charAt(i++));
-                }
-                fields.add(sb.length() == 0 ? null : sb);
-                if (i < end && text.charAt(i) == ',') {
-                    i++;
-                } else {
-                    break;
-                }
-            }
-        }
-        return fields;
     }
 
     public static final class Field<Z, A> {

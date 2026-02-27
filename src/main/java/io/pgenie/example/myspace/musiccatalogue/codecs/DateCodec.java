@@ -30,8 +30,19 @@ final class DateCodec implements Codec<LocalDate> {
         sb.append(value);
     }
 
-    public LocalDate parse(CharSequence text) {
-        return LocalDate.parse(text);
+    @Override
+    public Codec.ParsingResult<LocalDate> parse(char[] input, int offset) throws Codec.ParseException {
+        // ISO local date format: YYYY-MM-DD (10 characters)
+        int end = offset + 10;
+        if (end > input.length) {
+            throw new Codec.ParseException(input, offset, "Expected ISO date (YYYY-MM-DD)");
+        }
+        try {
+            LocalDate value = LocalDate.parse(new String(input, offset, 10));
+            return new Codec.ParsingResult<>(value, end);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new Codec.ParseException(input, offset, e.getMessage());
+        }
     }
 
 }

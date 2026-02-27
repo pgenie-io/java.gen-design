@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 
 import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.codecs.Codec;
 import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
@@ -112,10 +113,14 @@ public record SelectAlbumByFormat(AlbumFormat format)
             Date releasedSql = rs.getDate(3);
             LocalDate released = releasedSql != null ? releasedSql.toLocalDate() : null;
             String formatStr = rs.getString(4);
-            AlbumFormat format = AlbumFormat.CODEC.parse(formatStr);
             String recordingStr = rs.getString(5);
-            RecordingInfo recording = RecordingInfo.CODEC.parse(recordingStr);
-            output.add(new OutputRow(id, name, released, format, recording));
+            try {
+                AlbumFormat format = formatStr != null ? AlbumFormat.CODEC.parse(formatStr.toCharArray(), 0).value : null;
+                RecordingInfo recording = recordingStr != null ? RecordingInfo.CODEC.parse(recordingStr.toCharArray(), 0).value : null;
+                output.add(new OutputRow(id, name, released, format, recording));
+            } catch (Codec.ParseException e) {
+                throw new IllegalStateException(e);
+            }
         }
         return output;
     }

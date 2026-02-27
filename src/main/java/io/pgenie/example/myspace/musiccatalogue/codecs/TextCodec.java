@@ -23,8 +23,9 @@ final class TextCodec implements Codec<String> {
         sb.append(value);
     }
 
-    public String parse(CharSequence text) {
-        return text.toString();
+    @Override
+    public Codec.ParsingResult<String> parse(char[] input, int offset) throws Codec.ParseException {
+        return new Codec.ParsingResult<>(new String(input, offset, input.length - offset), input.length);
     }
 
 }

@@ -30,6 +30,46 @@ public interface Codec<A> {
      */
     void write(StringBuilder sb, A value);
 
-    A parse(CharSequence text);
+    /**
+     * Parses a PostgreSQL text-format literal of type A from {@code input}
+     * starting at {@code offset}.
+     *
+     * <p>The input must be a non-null char array holding the raw text as
+     * returned by the PostgreSQL server (e.g. the string value of a column
+     * obtained via {@link java.sql.ResultSet#getString}). NULL column values
+     * must be handled by the caller before invoking this method; passing a
+     * null-derived empty array for a NULL value is incorrect.
+     *
+     * <p>Returns the parsed value together with the offset of the first
+     * character that was <em>not</em> consumed, allowing callers to continue
+     * parsing subsequent fields without copying the input. Throws
+     * {@link ParseException} if the input cannot be interpreted as a valid
+     * literal of type A.
+     */
+    ParsingResult<A> parse(char[] input, int offset) throws ParseException;
+
+    final class ParsingResult<A> {
+
+        public final A value;
+        public final int nextOffset;
+
+        public ParsingResult(A value, int nextOffset) {
+            this.value = value;
+            this.nextOffset = nextOffset;
+        }
+
+    }
+
+    final class ParseException extends Exception {
+
+        public ParseException(char[] input, int offset, String message) {
+            this(new String(input, offset, input.length - offset), message);
+        }
+
+        public ParseException(CharSequence input, String message) {
+            super(String.format("Parse error: %s (input: \"%s\")", message, input));
+        }
+
+    }
 
 }

@@ -29,8 +29,10 @@ public final class MappedCodec<A, B> implements Codec<B> {
         codec.write(sb, fromMapped.apply(value));
     }
 
-    public B parse(CharSequence text) {
-        return toMapped.apply(codec.parse(text));
+    @Override
+    public Codec.ParsingResult<B> parse(char[] input, int offset) throws Codec.ParseException {
+        var result = codec.parse(input, offset);
+        return new Codec.ParsingResult<>(toMapped.apply(result.value), result.nextOffset);
     }
 
 }
