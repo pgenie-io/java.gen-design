@@ -9,7 +9,7 @@ import org.postgresql.util.PGobject;
 
 import java.sql.PreparedStatement;
 
-public final class CompositeScalar<Z> implements Scalar<Z> {
+public final class CompositeCodec<Z> implements Codec<Z> {
 
     private final String schema;
     private final String pgName;
@@ -17,7 +17,7 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
     private final Field<Z, ?>[] fields;
 
     @SuppressWarnings("unchecked")
-    public <A, B> CompositeScalar(
+    public <A, B> CompositeCodec(
             String schema, String name,
             Function<A, Function<B, Z>> construct,
             Field<Z, A> fieldA,
@@ -29,7 +29,7 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C> CompositeScalar(
+    public <A, B, C> CompositeCodec(
             String schema, String name,
             Function<A, Function<B, Function<C, Z>>> construct,
             Field<Z, A> fieldA,
@@ -42,7 +42,7 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C, D> CompositeScalar(
+    public <A, B, C, D> CompositeCodec(
             String schema, String name,
             Function<A, Function<B, Function<C, Function<D, Z>>>> construct,
             Field<Z, A> fieldA,
@@ -56,7 +56,7 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
     }
 
     @SuppressWarnings("unchecked")
-    public <A, B, C, D, E> CompositeScalar(
+    public <A, B, C, D, E> CompositeCodec(
             String schema, String name,
             Function<A, Function<B, Function<C, Function<D, Function<E, Z>>>>> construct,
             Field<Z, A> fieldA,
@@ -235,9 +235,9 @@ public final class CompositeScalar<Z> implements Scalar<Z> {
 
         public final String name;
         public final Function<Z, A> accessor;
-        public final Scalar<A> codec;
+        public final Codec<A> codec;
 
-        public Field(String name, Function<Z, A> accessor, Scalar<A> codec) {
+        public Field(String name, Function<Z, A> accessor, Codec<A> codec) {
             this.name = name;
             this.accessor = accessor;
             this.codec = codec;

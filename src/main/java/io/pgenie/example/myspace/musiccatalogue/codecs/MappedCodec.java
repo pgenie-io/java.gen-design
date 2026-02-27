@@ -4,13 +4,13 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.function.Function;
 
-public final class MappedScalar<A, B> implements Scalar<B> {
+public final class MappedCodec<A, B> implements Codec<B> {
 
-    private final Scalar<A> codec;
+    private final Codec<A> codec;
     private final Function<A, B> toMapped;
     private final Function<B, A> fromMapped;
 
-    public MappedScalar(Scalar<A> codec, Function<A, B> toMapped, Function<B, A> fromMapped) {
+    public MappedCodec(Codec<A> codec, Function<A, B> toMapped, Function<B, A> fromMapped) {
         this.codec = codec;
         this.toMapped = toMapped;
         this.fromMapped = fromMapped;

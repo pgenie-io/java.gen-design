@@ -4,9 +4,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 
-final class Int8Scalar implements Scalar<Long> {
+final class Int8Codec implements Codec<Long> {
 
-    public static final Int8Scalar instance = new Int8Scalar();
+    public static final Int8Codec instance = new Int8Codec();
 
     public String name() {
         return "int8";

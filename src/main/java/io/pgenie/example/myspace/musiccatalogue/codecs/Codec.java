@@ -2,12 +2,17 @@ package io.pgenie.example.myspace.musiccatalogue.codecs;
 
 import java.sql.PreparedStatement;
 
-public interface Scalar<A> {
+/**
+ * A codec for a single scalar value.
+ *
+ * @param <A> the type of the value
+ */
+public interface Codec<A> {
 
     // Codecs named by their PostgreSQL type name.
-    public static final Scalar<Long> INT8 = Int8Scalar.instance;
-    public static final Scalar<String> TEXT = TextScalar.instance;
-    public static final Scalar<java.time.LocalDate> DATE = DateScalar.instance;
+    public static final Codec<Long> INT8 = Int8Codec.instance;
+    public static final Codec<String> TEXT = TextCodec.instance;
+    public static final Codec<java.time.LocalDate> DATE = DateCodec.instance;
 
     String name();
 

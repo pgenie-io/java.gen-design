@@ -3,11 +3,11 @@ package io.pgenie.example.myspace.musiccatalogue.codecs;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-final class TextScalar implements Scalar<String> {
+final class TextCodec implements Codec<String> {
 
-    static final TextScalar instance = new TextScalar();
+    static final TextCodec instance = new TextCodec();
 
-    private TextScalar() {
+    private TextCodec() {
     }
 
     public String name() {

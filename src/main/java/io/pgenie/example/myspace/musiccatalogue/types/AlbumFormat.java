@@ -2,7 +2,7 @@ package io.pgenie.example.myspace.musiccatalogue.types;
 
 import java.util.Map;
 
-import io.pgenie.example.myspace.musiccatalogue.codecs.EnumScalar;
+import io.pgenie.example.myspace.musiccatalogue.codecs.EnumCodec;
 
 /**
  * Representation of the {@code album_format} user-declared PostgreSQL
@@ -39,7 +39,7 @@ public enum AlbumFormat {
      */
     SACD;
 
-    public static final EnumScalar<AlbumFormat> CODEC = new EnumScalar<>(
+    public static final EnumCodec<AlbumFormat> CODEC = new EnumCodec<>(
             "public", "album_format",
             Map.ofEntries(
                     Map.entry(VINYL, "Vinyl"),
