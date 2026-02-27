@@ -93,31 +93,31 @@ public final class CompositeCodec<Z> implements Codec<Z> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Codec.ParsingResult<Z> parse(char[] input, int offset) throws Codec.ParseException {
-        int len = input.length;
-        if (offset >= len || input[offset] != '(') {
+    public Codec.ParsingResult<Z> parse(CharSequence input, int offset) throws Codec.ParseException {
+        int len = input.length();
+        if (offset >= len || input.charAt(offset) != '(') {
             throw new Codec.ParseException(input, offset, "Expected '(' to open composite " + pgName);
         }
         int i = offset + 1; // skip '('
         Object fn = constructor;
         for (int fieldIdx = 0; fieldIdx < fields.length; fieldIdx++) {
             if (fieldIdx > 0) {
-                if (i >= len || input[i] != ',') {
+                if (i >= len || input.charAt(i) != ',') {
                     throw new Codec.ParseException(input, i, "Expected ',' between fields in composite " + pgName);
                 }
                 i++; // skip ','
             }
-            if (i >= len || input[i] == ',' || input[i] == ')') {
+            if (i >= len || input.charAt(i) == ',' || input.charAt(i) == ')') {
                 // NULL field
                 fn = ((Function<Object, Object>) fn).apply(null);
-            } else if (input[i] == '"') {
-                // Quoted field — unescape into a fresh char[]
+            } else if (input.charAt(i) == '"') {
+                // Quoted field — unescape into a StringBuilder and parse it directly
                 i++; // skip opening '"'
                 var sb = new StringBuilder();
                 while (i < len) {
-                    char c = input[i];
+                    char c = input.charAt(i);
                     if (c == '"') {
-                        if (i + 1 < len && input[i + 1] == '"') {
+                        if (i + 1 < len && input.charAt(i + 1) == '"') {
                             sb.append('"');
                             i += 2;
                         } else {
@@ -126,7 +126,7 @@ public final class CompositeCodec<Z> implements Codec<Z> {
                         }
                     } else if (c == '\\') {
                         if (i + 1 < len) {
-                            sb.append(input[i + 1]);
+                            sb.append(input.charAt(i + 1));
                             i += 2;
                         } else {
                             sb.append(c);
@@ -137,24 +137,19 @@ public final class CompositeCodec<Z> implements Codec<Z> {
                         i++;
                     }
                 }
-                char[] fieldChars = new char[sb.length()];
-                sb.getChars(0, sb.length(), fieldChars, 0);
-                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(fieldChars, 0);
+                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(sb, 0);
                 fn = ((Function<Object, Object>) fn).apply(result.value);
             } else {
-                // Unquoted field — find the end boundary then pass a bounded slice
+                // Unquoted field — pass a subSequence bounded to this field
                 int fieldStart = i;
-                while (i < len && input[i] != ',' && input[i] != ')') {
+                while (i < len && input.charAt(i) != ',' && input.charAt(i) != ')') {
                     i++;
                 }
-                int fieldLen = i - fieldStart;
-                char[] fieldChars = new char[fieldLen];
-                System.arraycopy(input, fieldStart, fieldChars, 0, fieldLen);
-                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(fieldChars, 0);
+                var result = ((Codec<Object>) fields[fieldIdx].codec).parse(input.subSequence(fieldStart, i), 0);
                 fn = ((Function<Object, Object>) fn).apply(result.value);
             }
         }
-        if (i >= len || input[i] != ')') {
+        if (i >= len || input.charAt(i) != ')') {
             throw new Codec.ParseException(input, i, "Expected ')' to close composite " + pgName);
         }
         return new Codec.ParsingResult<>((Z) fn, i + 1);

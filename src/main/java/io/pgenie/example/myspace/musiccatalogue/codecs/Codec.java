@@ -34,11 +34,12 @@ public interface Codec<A> {
      * Parses a PostgreSQL text-format literal of type A from {@code input}
      * starting at {@code offset}.
      *
-     * <p>The input must be a non-null char array holding the raw text as
-     * returned by the PostgreSQL server (e.g. the string value of a column
-     * obtained via {@link java.sql.ResultSet#getString}). NULL column values
-     * must be handled by the caller before invoking this method; passing a
-     * null-derived empty array for a NULL value is incorrect.
+     * <p>The input must be a non-null {@link CharSequence} holding the raw text
+     * as returned by the PostgreSQL server (e.g. the string value of a column
+     * obtained via {@link java.sql.ResultSet#getString}). Passing the
+     * {@code String} directly avoids an extra copy compared to converting to a
+     * {@code char[]} first. NULL column values must be handled by the caller
+     * before invoking this method.
      *
      * <p>Returns the parsed value together with the offset of the first
      * character that was <em>not</em> consumed, allowing callers to continue
@@ -46,7 +47,7 @@ public interface Codec<A> {
      * {@link ParseException} if the input cannot be interpreted as a valid
      * literal of type A.
      */
-    ParsingResult<A> parse(char[] input, int offset) throws ParseException;
+    ParsingResult<A> parse(CharSequence input, int offset) throws ParseException;
 
     final class ParsingResult<A> {
 
@@ -62,8 +63,8 @@ public interface Codec<A> {
 
     final class ParseException extends Exception {
 
-        public ParseException(char[] input, int offset, String message) {
-            this(new String(input, offset, input.length - offset), message);
+        public ParseException(CharSequence input, int offset, String message) {
+            this(input.subSequence(offset, input.length()), message);
         }
 
         public ParseException(CharSequence input, String message) {

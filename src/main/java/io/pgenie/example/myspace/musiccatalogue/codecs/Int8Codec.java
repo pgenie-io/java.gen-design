@@ -26,22 +26,22 @@ final class Int8Codec implements Codec<Long> {
     }
 
     @Override
-    public Codec.ParsingResult<Long> parse(char[] input, int offset) throws Codec.ParseException {
+    public Codec.ParsingResult<Long> parse(CharSequence input, int offset) throws Codec.ParseException {
         int i = offset;
-        int len = input.length;
+        int len = input.length();
         if (i >= len) {
             throw new Codec.ParseException(input, offset, "Expected int8, reached end of input");
         }
-        boolean negative = input[i] == '-';
-        if (negative || input[i] == '+') {
+        boolean negative = input.charAt(i) == '-';
+        if (negative || input.charAt(i) == '+') {
             i++;
         }
-        if (i >= len || input[i] < '0' || input[i] > '9') {
+        if (i >= len || input.charAt(i) < '0' || input.charAt(i) > '9') {
             throw new Codec.ParseException(input, offset, "Expected int8 digits");
         }
         long value = 0;
-        while (i < len && input[i] >= '0' && input[i] <= '9') {
-            value = value * 10 + (input[i++] - '0');
+        while (i < len && input.charAt(i) >= '0' && input.charAt(i) <= '9') {
+            value = value * 10 + (input.charAt(i++) - '0');
         }
         return new Codec.ParsingResult<>(negative ? -value : value, i);
     }

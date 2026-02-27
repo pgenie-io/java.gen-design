@@ -115,8 +115,8 @@ public record SelectAlbumByFormat(AlbumFormat format)
             String formatStr = rs.getString(4);
             String recordingStr = rs.getString(5);
             try {
-                AlbumFormat format = formatStr != null ? AlbumFormat.CODEC.parse(formatStr.toCharArray(), 0).value : null;
-                RecordingInfo recording = recordingStr != null ? RecordingInfo.CODEC.parse(recordingStr.toCharArray(), 0).value : null;
+                AlbumFormat format = formatStr != null ? AlbumFormat.CODEC.parse(formatStr, 0).value : null;
+                RecordingInfo recording = recordingStr != null ? RecordingInfo.CODEC.parse(recordingStr, 0).value : null;
                 output.add(new OutputRow(id, name, released, format, recording));
             } catch (Codec.ParseException e) {
                 throw new IllegalStateException(e);

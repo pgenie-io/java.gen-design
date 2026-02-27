@@ -33,13 +33,13 @@ public final class EnumCodec<E> implements Codec<E> {
     }
 
     @Override
-    public Codec.ParsingResult<E> parse(char[] input, int offset) throws Codec.ParseException {
-        String label = new String(input, offset, input.length - offset);
+    public Codec.ParsingResult<E> parse(CharSequence input, int offset) throws Codec.ParseException {
+        String label = input.subSequence(offset, input.length()).toString();
         E value = byPgLabel.get(label);
         if (value == null) {
             throw new Codec.ParseException(input, offset, "Unknown " + pgName + " value: " + label);
         }
-        return new Codec.ParsingResult<>(value, input.length);
+        return new Codec.ParsingResult<>(value, input.length());
     }
 
     @Override

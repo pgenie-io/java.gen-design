@@ -30,7 +30,7 @@ public final class MappedCodec<A, B> implements Codec<B> {
     }
 
     @Override
-    public Codec.ParsingResult<B> parse(char[] input, int offset) throws Codec.ParseException {
+    public Codec.ParsingResult<B> parse(CharSequence input, int offset) throws Codec.ParseException {
         var result = codec.parse(input, offset);
         return new Codec.ParsingResult<>(toMapped.apply(result.value), result.nextOffset);
     }
