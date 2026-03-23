@@ -18,7 +18,7 @@ public final class EnumCodec<E> implements Codec<E> {
         this.schema = schema;
         this.pgName = name;
         this.pgLabels = pgLabels;
-        this.byPgLabel = new HashMap<>(pgLabels.size() * 2);
+        this.byPgLabel = new HashMap<>(pgLabels.size());
         pgLabels.forEach((constant, label) -> byPgLabel.put(label, constant));
     }
 
