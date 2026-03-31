@@ -18,7 +18,21 @@
         <maven.compiler.target>23</maven.compiler.target>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/codemine-io/postgresql-codecs.java</url>
+        </repository>
+    </repositories>
+
     <dependencies>
+        <!-- PostgreSQL codecs library -->
+        <dependency>
+            <groupId>io.codemine.java.postgresql</groupId>
+            <artifactId>codecs</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+
         <!-- PostgreSQL JDBC driver -->
         <dependency>
             <groupId>org.postgresql</groupId>

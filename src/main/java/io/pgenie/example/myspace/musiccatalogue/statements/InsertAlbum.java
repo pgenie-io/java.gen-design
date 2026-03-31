@@ -8,6 +8,7 @@ import java.sql.Types;
 import java.time.LocalDate;
 
 import io.pgenie.example.myspace.musiccatalogue.Statement;
+import io.pgenie.example.myspace.musiccatalogue.codecs.Jdbc;
 import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
@@ -72,8 +73,8 @@ public record InsertAlbum(
         } else {
             ps.setNull(2, Types.DATE);
         }
-        AlbumFormat.CODEC.bind(ps, 3, this.format());
-        RecordingInfo.CODEC.bind(ps, 4, this.recording());
+        Jdbc.bind(ps, 3, AlbumFormat.CODEC, this.format());
+        Jdbc.bind(ps, 4, RecordingInfo.CODEC, this.recording());
     }
 
     @Override

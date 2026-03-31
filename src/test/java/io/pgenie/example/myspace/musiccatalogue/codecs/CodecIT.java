@@ -5,16 +5,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import io.codemine.java.postgresql.codecs.Codec;
+import io.codemine.java.postgresql.codecs.CompositeCodec;
+import io.codemine.java.postgresql.codecs.*;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.OffsetTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -44,31 +47,30 @@ public class CodecIT {
     }
 
     /**
-     * Generic helper: binds a value using the codec, sends it through PostgreSQL
-     * via a cast expression, reads back the text representation, and parses it.
+     * Generic helper: binds a value using the codec via PGobject, sends it
+     * through PostgreSQL via a cast expression, reads back the text
+     * representation, and parses it.
      */
     private <A> A roundTrip(Codec<A> codec, String castType, A value) throws Exception {
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::" + castType)) {
-            codec.bind(ps, 1, value);
+            Jdbc.bind(ps, 1, codec, value);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next(), "Expected a result row");
                 String text = rs.getString(1);
                 if (text == null) return null;
-                var result = codec.parse(text, 0);
-                return result.value;
+                return codec.decodeInTextFromString(text);
             }
         }
     }
 
     /**
-     * Helper for types where we just check string equality of results
-     * (useful when the Java type doesn't have a natural equals, like byte[]).
+     * Helper for types where we just check string equality of results.
      */
     private <A> String roundTripText(Codec<A> codec, String castType, A value) throws Exception {
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::" + castType)) {
-            codec.bind(ps, 1, value);
+            Jdbc.bind(ps, 1, codec, value);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next(), "Expected a result row");
                 return rs.getString(1);
@@ -273,7 +275,7 @@ public class CodecIT {
     @Test
     void charRoundTrip() throws Exception {
         // char(5) pads with spaces
-        String result = roundTrip(Codec.CHAR, "char(5)", "ab");
+        String result = roundTrip(Codec.BPCHAR, "char(5)", "ab");
         assertEquals("ab   ", result);
     }
 
@@ -284,19 +286,21 @@ public class CodecIT {
     @Test
     void byteaRoundTrip() throws Exception {
         byte[] input = new byte[]{0x01, 0x02, (byte) 0xFF, 0x00, 0x7F};
-        String text = roundTripText(Codec.BYTEA, "bytea", input);
+        Bytea bytea = new Bytea(input);
+        String text = roundTripText(Codec.BYTEA, "bytea", bytea);
         assertNotNull(text);
-        var parsed = Codec.BYTEA.parse(text, 0);
-        assertArrayEquals(input, parsed.value);
+        var parsed = Codec.BYTEA.decodeInTextFromString(text);
+        assertArrayEquals(input, parsed.bytes());
     }
 
     @Test
     void byteaEmpty() throws Exception {
         byte[] input = new byte[0];
-        String text = roundTripText(Codec.BYTEA, "bytea", input);
+        Bytea bytea = new Bytea(input);
+        String text = roundTripText(Codec.BYTEA, "bytea", bytea);
         assertNotNull(text);
-        var parsed = Codec.BYTEA.parse(text, 0);
-        assertArrayEquals(input, parsed.value);
+        var parsed = Codec.BYTEA.decodeInTextFromString(text);
+        assertArrayEquals(input, parsed.bytes());
     }
 
     @Test
@@ -346,8 +350,12 @@ public class CodecIT {
 
     @Test
     void timetzRoundTrip() throws Exception {
-        var t = OffsetTime.of(14, 30, 45, 0, ZoneOffset.ofHours(3));
-        assertEquals(t, roundTrip(Codec.TIMETZ, "timetz", t));
+        // Timetz uses microseconds-from-midnight and zone offset in seconds (inverted sign)
+        var t = new Timetz(
+                (14L * 3600 + 30 * 60 + 45) * 1_000_000L,  // 14:30:45 in micros
+                -3 * 3600);                                   // UTC+3 → -10800
+        var result = roundTrip(Codec.TIMETZ, "timetz", t);
+        assertEquals(t, result);
     }
 
     @Test
@@ -382,9 +390,9 @@ public class CodecIT {
 
     @Test
     void timestamptzRoundTrip() throws Exception {
-        var ts = OffsetDateTime.of(2024, 6, 15, 14, 30, 45, 0, ZoneOffset.UTC);
-        var result = roundTrip(Codec.TIMESTAMPTZ, "timestamptz", ts);
-        assertEquals(ts.toInstant(), result.toInstant());
+        var instant = Instant.parse("2024-06-15T14:30:45Z");
+        var result = roundTrip(Codec.TIMESTAMPTZ, "timestamptz", instant);
+        assertEquals(instant, result);
     }
 
     @Test
@@ -398,8 +406,9 @@ public class CodecIT {
 
     @Test
     void intervalRoundTrip() throws Exception {
-        // PostgreSQL normalizes intervals; "1 year 2 mons 3 days" is canonical
-        String text = roundTripText(Codec.INTERVAL, "interval", "1 year 2 mons 3 days");
+        // 1 year 2 mons 3 days → month=14, day=3, time=0
+        var interval = new Interval(0, 3, 14);
+        String text = roundTripText(Codec.INTERVAL, "interval", interval);
         assertNotNull(text);
         assertTrue(text.contains("1 year"));
     }
@@ -436,9 +445,9 @@ public class CodecIT {
 
     @Test
     void jsonRoundTrip() throws Exception {
-        String json = "{\"key\":\"value\",\"num\":42}";
-        String result = roundTrip(Codec.JSON, "json", json);
-        // JSON preserves exact format
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var json = mapper.readTree("{\"key\":\"value\",\"num\":42}");
+        var result = roundTrip(Codec.JSON, "json", json);
         assertEquals(json, result);
     }
 
@@ -453,12 +462,11 @@ public class CodecIT {
 
     @Test
     void jsonbRoundTrip() throws Exception {
-        String json = "{\"key\": \"value\"}";
-        String result = roundTrip(Codec.JSONB, "jsonb", json);
-        // JSONB may reformat
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var json = mapper.readTree("{\"key\": \"value\"}");
+        var result = roundTrip(Codec.JSONB, "jsonb", json);
         assertNotNull(result);
-        assertTrue(result.contains("key"));
-        assertTrue(result.contains("value"));
+        assertEquals("value", result.get("key").asText());
     }
 
     @Test
@@ -472,7 +480,7 @@ public class CodecIT {
 
     @Test
     void oidRoundTrip() throws Exception {
-        assertEquals(12345L, roundTrip(Codec.OID, "oid", 12345L));
+        assertEquals(12345, roundTrip(Codec.OID, "oid", 12345));
     }
 
     @Test
@@ -486,14 +494,15 @@ public class CodecIT {
 
     @Test
     void moneyRoundTrip() throws Exception {
-        String text = roundTripText(Codec.MONEY, "money", "$100.50");
-        assertNotNull(text);
-        assertTrue(text.contains("100.50"));
+        // Money is represented as Long in cents (10050 = $100.50)
+        Long result = roundTrip(Codec.MONEY, "money", 10050L);
+        assertNotNull(result);
+        assertEquals(10050L, result);
     }
 
     @Test
     void moneyNull() throws Exception {
-        assertNull(roundTripText(Codec.MONEY, "money", null));
+        assertNull(roundTrip(Codec.MONEY, "money", null));
     }
 
     // -----------------------------------------------------------------------
@@ -502,19 +511,26 @@ public class CodecIT {
 
     @Test
     void inetIPv4() throws Exception {
-        assertEquals("192.168.1.1", roundTrip(Codec.INET, "inet", "192.168.1.1"));
+        var inet = Codec.INET.decodeInTextFromString("192.168.1.1");
+        var result = roundTrip(Codec.INET, "inet", inet);
+        assertNotNull(result);
+        assertEquals(inet, result);
     }
 
     @Test
     void inetIPv6() throws Exception {
-        String result = roundTrip(Codec.INET, "inet", "::1");
+        var inet = Codec.INET.decodeInTextFromString("2001:db8:1:1:1:1:1:1");
+        var result = roundTrip(Codec.INET, "inet", inet);
         assertNotNull(result);
-        assertTrue(result.equals("::1") || result.contains("::1"));
+        assertEquals(inet, result);
     }
 
     @Test
     void inetCIDR() throws Exception {
-        assertEquals("192.168.1.0/24", roundTrip(Codec.INET, "inet", "192.168.1.0/24"));
+        var inet = Codec.INET.decodeInTextFromString("192.168.1.0/24");
+        var result = roundTrip(Codec.INET, "inet", inet);
+        assertNotNull(result);
+        assertEquals(inet, result);
     }
 
     @Test
@@ -528,7 +544,10 @@ public class CodecIT {
 
     @Test
     void cidrRoundTrip() throws Exception {
-        assertEquals("192.168.1.0/24", roundTrip(Codec.CIDR, "cidr", "192.168.1.0/24"));
+        var cidr = Codec.CIDR.decodeInTextFromString("192.168.1.0/24");
+        var result = roundTrip(Codec.CIDR, "cidr", cidr);
+        assertNotNull(result);
+        assertEquals("192.168.1.0/24", Codec.CIDR.encodeInTextToString(result));
     }
 
     @Test
@@ -542,7 +561,10 @@ public class CodecIT {
 
     @Test
     void macaddrRoundTrip() throws Exception {
-        assertEquals("08:00:2b:01:02:03", roundTrip(Codec.MACADDR, "macaddr", "08:00:2b:01:02:03"));
+        var mac = Codec.MACADDR.decodeInTextFromString("08:00:2b:01:02:03");
+        var result = roundTrip(Codec.MACADDR, "macaddr", mac);
+        assertNotNull(result);
+        assertEquals("08:00:2b:01:02:03", Codec.MACADDR.encodeInTextToString(result));
     }
 
     @Test
@@ -556,8 +578,10 @@ public class CodecIT {
 
     @Test
     void macaddr8RoundTrip() throws Exception {
-        assertEquals("08:00:2b:01:02:03:04:05",
-                roundTrip(Codec.MACADDR8, "macaddr8", "08:00:2b:01:02:03:04:05"));
+        var mac = Codec.MACADDR8.decodeInTextFromString("08:00:2b:01:02:03:04:05");
+        var result = roundTrip(Codec.MACADDR8, "macaddr8", mac);
+        assertNotNull(result);
+        assertEquals("08:00:2b:01:02:03:04:05", Codec.MACADDR8.encodeInTextToString(result));
     }
 
     @Test
@@ -571,10 +595,10 @@ public class CodecIT {
 
     @Test
     void pointRoundTrip() throws Exception {
-        var pt = new org.postgresql.geometric.PGpoint(1.5, 2.5);
+        var pt = new Point(1.5, 2.5);
         var result = roundTrip(Codec.POINT, "point", pt);
-        assertEquals(pt.x, result.x, 0.0001);
-        assertEquals(pt.y, result.y, 0.0001);
+        assertEquals(pt.x(), result.x(), 0.0001);
+        assertEquals(pt.y(), result.y(), 0.0001);
     }
 
     @Test
@@ -584,24 +608,24 @@ public class CodecIT {
 
     @Test
     void boxRoundTrip() throws Exception {
-        var box = new org.postgresql.geometric.PGbox(3.0, 4.0, 1.0, 2.0);
+        var box = Box.of(3.0, 4.0, 1.0, 2.0);
         var result = roundTrip(Codec.BOX, "box", box);
         assertNotNull(result);
     }
 
     @Test
     void circleRoundTrip() throws Exception {
-        var circle = new org.postgresql.geometric.PGcircle(1.0, 2.0, 3.0);
+        var circle = new Circle(1.0, 2.0, 3.0);
         var result = roundTrip(Codec.CIRCLE, "circle", circle);
         assertNotNull(result);
-        assertEquals(circle.center.x, result.center.x, 0.0001);
-        assertEquals(circle.center.y, result.center.y, 0.0001);
-        assertEquals(circle.radius, result.radius, 0.0001);
+        assertEquals(circle.x(), result.x(), 0.0001);
+        assertEquals(circle.y(), result.y(), 0.0001);
+        assertEquals(circle.r(), result.r(), 0.0001);
     }
 
     @Test
     void lsegRoundTrip() throws Exception {
-        var lseg = new org.postgresql.geometric.PGlseg(1.0, 2.0, 3.0, 4.0);
+        var lseg = new Lseg(1.0, 2.0, 3.0, 4.0);
         var result = roundTrip(Codec.LSEG, "lseg", lseg);
         assertNotNull(result);
     }
@@ -612,17 +636,36 @@ public class CodecIT {
 
     @Test
     void bitRoundTrip() throws Exception {
-        assertEquals("10110", roundTrip(Codec.BIT, "bit(5)", "10110"));
+        var bit = Codec.BIT.decodeInTextFromString("10110");
+        try (var conn = connect();
+             var ps = conn.prepareStatement("SELECT ?::bit(5)")) {
+            ps.setString(1, Codec.BIT.encodeInTextToString(bit));
+            try (ResultSet rs = ps.executeQuery()) {
+                assertTrue(rs.next());
+                String text = rs.getString(1);
+                var result = Codec.BIT.decodeInTextFromString(text);
+                assertEquals("10110", Codec.BIT.encodeInTextToString(result));
+            }
+        }
     }
 
     @Test
     void bitNull() throws Exception {
-        assertNull(roundTrip(Codec.BIT, "bit(5)", null));
+        try (var conn = connect();
+             var ps = conn.prepareStatement("SELECT ?::bit(5)")) {
+            ps.setNull(1, java.sql.Types.OTHER);
+            try (ResultSet rs = ps.executeQuery()) {
+                assertTrue(rs.next());
+                assertNull(rs.getString(1));
+            }
+        }
     }
 
     @Test
     void varbitRoundTrip() throws Exception {
-        assertEquals("1011010", roundTrip(Codec.VARBIT, "varbit", "1011010"));
+        var bit = Codec.VARBIT.decodeInTextFromString("1011010");
+        var result = roundTrip(Codec.VARBIT, "varbit", bit);
+        assertEquals("1011010", Codec.VARBIT.encodeInTextToString(result));
     }
 
     @Test
@@ -636,8 +679,8 @@ public class CodecIT {
 
     @Test
     void tsvectorRoundTrip() throws Exception {
-        // Note: PostgreSQL normalizes tsvectors
-        String text = roundTripText(Codec.TSVECTOR, "tsvector", "'hello' 'world'");
+        var tsvector = Codec.TSVECTOR.decodeInTextFromString("'hello' 'world'");
+        String text = roundTripText(Codec.TSVECTOR, "tsvector", tsvector);
         assertNotNull(text);
         assertTrue(text.contains("hello") && text.contains("world"));
     }
@@ -653,67 +696,67 @@ public class CodecIT {
 
     @Test
     void int4ArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_int4", Codec.INT4);
+        var codec = Codec.INT4.inDim();
         var input = List.of(1, 2, 3);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::int4[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
 
     @Test
     void int4ArrayEmpty() throws Exception {
-        var codec = new ArrayCodec<>("_int4", Codec.INT4);
+        var codec = Codec.INT4.inDim();
         List<Integer> input = List.of();
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::int4[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
 
     @Test
     void int4ArrayWithNulls() throws Exception {
-        var codec = new ArrayCodec<>("_int4", Codec.INT4);
+        var codec = Codec.INT4.inDim();
         var input = new java.util.ArrayList<Integer>();
         input.add(1);
         input.add(null);
         input.add(3);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::int4[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(3, result.value.size());
-                assertEquals(1, result.value.get(0));
-                assertNull(result.value.get(1));
-                assertEquals(3, result.value.get(2));
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(3, result.size());
+                assertEquals(1, result.get(0));
+                assertNull(result.get(1));
+                assertEquals(3, result.get(2));
             }
         }
     }
 
     @Test
     void int4ArrayNull() throws Exception {
-        var codec = new ArrayCodec<>("_int4", Codec.INT4);
+        var codec = Codec.INT4.inDim();
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::int4[]")) {
-            codec.bind(ps, 1, null);
+            Jdbc.bind(ps, 1, codec, null);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 assertNull(rs.getString(1));
@@ -727,57 +770,57 @@ public class CodecIT {
 
     @Test
     void textArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_text", Codec.TEXT);
+        var codec = Codec.TEXT.inDim();
         var input = List.of("hello", "world", "foo bar");
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::text[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
 
     @Test
     void textArrayWithSpecialChars() throws Exception {
-        var codec = new ArrayCodec<>("_text", Codec.TEXT);
+        var codec = Codec.TEXT.inDim();
         var input = List.of("a,b", "c\"d", "e\\f", "");
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::text[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
 
     @Test
     void textArrayWithNulls() throws Exception {
-        var codec = new ArrayCodec<>("_text", Codec.TEXT);
+        var codec = Codec.TEXT.inDim();
         var input = new java.util.ArrayList<String>();
         input.add("hello");
         input.add(null);
         input.add("world");
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::text[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(3, result.value.size());
-                assertEquals("hello", result.value.get(0));
-                assertNull(result.value.get(1));
-                assertEquals("world", result.value.get(2));
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(3, result.size());
+                assertEquals("hello", result.get(0));
+                assertNull(result.get(1));
+                assertEquals("world", result.get(2));
             }
         }
     }
@@ -788,17 +831,17 @@ public class CodecIT {
 
     @Test
     void boolArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_bool", Codec.BOOL);
+        var codec = Codec.BOOL.inDim();
         var input = List.of(true, false, true);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::bool[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
@@ -809,20 +852,20 @@ public class CodecIT {
 
     @Test
     void float8ArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_float8", Codec.FLOAT8);
+        var codec = Codec.FLOAT8.inDim();
         var input = List.of(1.1, 2.2, 3.3);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::float8[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(3, result.value.size());
-                assertEquals(1.1, result.value.get(0), 0.0001);
-                assertEquals(2.2, result.value.get(1), 0.0001);
-                assertEquals(3.3, result.value.get(2), 0.0001);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(3, result.size());
+                assertEquals(1.1, result.get(0), 0.0001);
+                assertEquals(2.2, result.get(1), 0.0001);
+                assertEquals(3.3, result.get(2), 0.0001);
             }
         }
     }
@@ -833,19 +876,19 @@ public class CodecIT {
 
     @Test
     void uuidArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_uuid", Codec.UUID);
+        var codec = Codec.UUID.inDim();
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         var input = List.of(id1, id2);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::uuid[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
@@ -856,17 +899,17 @@ public class CodecIT {
 
     @Test
     void dateArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_date", Codec.DATE);
+        var codec = Codec.DATE.inDim();
         var input = List.of(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::date[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
@@ -877,19 +920,19 @@ public class CodecIT {
 
     @Test
     void timestampArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_timestamp", Codec.TIMESTAMP);
+        var codec = Codec.TIMESTAMP.inDim();
         var ts1 = LocalDateTime.of(2024, 6, 15, 10, 30, 0);
         var ts2 = LocalDateTime.of(2024, 12, 25, 23, 59, 59);
         var input = List.of(ts1, ts2);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::timestamp[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input, result);
             }
         }
     }
@@ -920,15 +963,15 @@ public class CodecIT {
         var input = new TestComp(42, "hello world", true);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::test_comp")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input.a(), result.value.a());
-                assertEquals(input.b(), result.value.b());
-                assertEquals(input.c(), result.value.c());
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input.a(), result.a());
+                assertEquals(input.b(), result.b());
+                assertEquals(input.c(), result.c());
             }
         }
     }
@@ -954,14 +997,14 @@ public class CodecIT {
         var input = new TestComp2(null, "hello");
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::test_comp2")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertNull(result.value.a());
-                assertEquals("hello", result.value.b());
+                var result = codec.decodeInTextFromString(text);
+                assertNull(result.a());
+                assertEquals("hello", result.b());
             }
         }
     }
@@ -987,14 +1030,14 @@ public class CodecIT {
         var input = new TestComp3("hello, world", "she said \"hi\"");
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::test_comp3")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input.a(), result.value.a());
-                assertEquals(input.b(), result.value.b());
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(input.a(), result.a());
+                assertEquals(input.b(), result.b());
             }
         }
     }
@@ -1019,51 +1062,10 @@ public class CodecIT {
 
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::test_comp4")) {
-            codec.bind(ps, 1, null);
+            Jdbc.bind(ps, 1, codec, null);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 assertNull(rs.getString(1));
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Composite with row() syntax (writeAsRow)
-    // -----------------------------------------------------------------------
-
-    @Test
-    void compositeWriteAsRow() throws Exception {
-        try (var conn = connect();
-             var stmt = conn.createStatement()) {
-            stmt.execute("""
-                    DO $$ BEGIN
-                        CREATE TYPE test_row_comp AS (x int4, y text);
-                    EXCEPTION WHEN duplicate_object THEN null;
-                    END $$;
-                    """);
-        }
-        record RowComp(Integer x, String y) {}
-        var codec = new CompositeCodec<RowComp>(
-                "public", "test_row_comp",
-                (Integer x) -> (String y) -> new RowComp(x, y),
-                new CompositeCodec.Field<>("x", RowComp::x, Codec.INT4),
-                new CompositeCodec.Field<>("y", RowComp::y, Codec.TEXT));
-
-        var input = new RowComp(42, "hello");
-        var sb = new StringBuilder();
-        codec.writeAsRow(sb, input);
-        String rowExpr = sb.toString();
-        assertTrue(rowExpr.startsWith("row("));
-        assertTrue(rowExpr.endsWith(")"));
-
-        // Verify it works as SQL by executing it
-        try (var conn = connect();
-             var stmt = conn.createStatement()) {
-            try (ResultSet rs = stmt.executeQuery(
-                    "SELECT (" + rowExpr + "::test_row_comp).*")) {
-                assertTrue(rs.next());
-                assertEquals(42, rs.getInt(1));
-                assertEquals("hello", rs.getString(2));
             }
         }
     }
@@ -1089,22 +1091,22 @@ public class CodecIT {
                 (Integer id) -> (String name) -> new ArrComp(id, name),
                 new CompositeCodec.Field<>("id", ArrComp::id, Codec.INT4),
                 new CompositeCodec.Field<>("name", ArrComp::name, Codec.TEXT));
-        var arrayCodec = new ArrayCodec<>("_test_arr_comp", elemCodec);
+        var arrayCodec = elemCodec.inDim();
 
         var input = List.of(new ArrComp(1, "Alice"), new ArrComp(2, "Bob"));
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::test_arr_comp[]")) {
-            arrayCodec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, arrayCodec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = arrayCodec.parse(text, 0);
-                assertEquals(2, result.value.size());
-                assertEquals(1, result.value.get(0).id());
-                assertEquals("Alice", result.value.get(0).name());
-                assertEquals(2, result.value.get(1).id());
-                assertEquals("Bob", result.value.get(1).name());
+                var result = arrayCodec.decodeInTextFromString(text);
+                assertEquals(2, result.size());
+                assertEquals(1, result.get(0).id());
+                assertEquals("Alice", result.get(0).name());
+                assertEquals(2, result.get(1).id());
+                assertEquals("Bob", result.get(1).name());
             }
         }
     }
@@ -1115,17 +1117,21 @@ public class CodecIT {
 
     @Test
     void inetArrayRoundTrip() throws Exception {
-        var codec = new ArrayCodec<>("_inet", Codec.INET);
-        var input = List.of("192.168.1.1", "10.0.0.1");
+        var codec = Codec.INET.inDim();
+        var inet1 = Codec.INET.decodeInTextFromString("192.168.1.1");
+        var inet2 = Codec.INET.decodeInTextFromString("10.0.0.1");
+        var input = List.of(inet1, inet2);
         try (var conn = connect();
              var ps = conn.prepareStatement("SELECT ?::inet[]")) {
-            codec.bind(ps, 1, input);
+            Jdbc.bind(ps, 1, codec, input);
             try (ResultSet rs = ps.executeQuery()) {
                 assertTrue(rs.next());
                 String text = rs.getString(1);
                 assertNotNull(text);
-                var result = codec.parse(text, 0);
-                assertEquals(input, result.value);
+                var result = codec.decodeInTextFromString(text);
+                assertEquals(2, result.size());
+                assertEquals(inet1, result.get(0));
+                assertEquals(inet2, result.get(1));
             }
         }
     }
@@ -1136,25 +1142,23 @@ public class CodecIT {
 
     @Test
     void arrayWriteParseRoundTripNoDB() throws Exception {
-        var codec = new ArrayCodec<>("_int4", Codec.INT4);
+        var codec = Codec.INT4.inDim();
         var input = List.of(10, 20, 30);
-        var sb = new StringBuilder();
-        codec.write(sb, input);
-        var result = codec.parse(sb.toString(), 0);
-        assertEquals(input, result.value);
+        var encoded = codec.encodeInTextToString(input);
+        var result = codec.decodeInTextFromString(encoded);
+        assertEquals(input, result);
     }
 
     @Test
     void arrayWriteParseWithNullsNoDB() throws Exception {
-        var codec = new ArrayCodec<>("_text", Codec.TEXT);
+        var codec = Codec.TEXT.inDim();
         var input = new java.util.ArrayList<String>();
         input.add("a");
         input.add(null);
         input.add("c");
-        var sb = new StringBuilder();
-        codec.write(sb, input);
-        var result = codec.parse(sb.toString(), 0);
-        assertEquals(input, result.value);
+        var encoded = codec.encodeInTextToString(input);
+        var result = codec.decodeInTextFromString(encoded);
+        assertEquals(input, result);
     }
 
     @Test
@@ -1166,11 +1170,10 @@ public class CodecIT {
                 new CompositeCodec.Field<>("x", Pair::x, Codec.INT4),
                 new CompositeCodec.Field<>("y", Pair::y, Codec.TEXT));
         var input = new Pair(42, "test value");
-        var sb = new StringBuilder();
-        codec.write(sb, input);
-        var result = codec.parse(sb.toString(), 0);
-        assertEquals(input.x(), result.value.x());
-        assertEquals(input.y(), result.value.y());
+        var encoded = codec.encodeInTextToString(input);
+        var result = codec.decodeInTextFromString(encoded);
+        assertEquals(input.x(), result.x());
+        assertEquals(input.y(), result.y());
     }
 
     @Test
@@ -1182,11 +1185,10 @@ public class CodecIT {
                 new CompositeCodec.Field<>("x", Pair::x, Codec.INT4),
                 new CompositeCodec.Field<>("y", Pair::y, Codec.TEXT));
         var input = new Pair(null, null);
-        var sb = new StringBuilder();
-        codec.write(sb, input);
-        var result = codec.parse(sb.toString(), 0);
-        assertNull(result.value.x());
-        assertNull(result.value.y());
+        var encoded = codec.encodeInTextToString(input);
+        var result = codec.decodeInTextFromString(encoded);
+        assertNull(result.x());
+        assertNull(result.y());
     }
 
 }

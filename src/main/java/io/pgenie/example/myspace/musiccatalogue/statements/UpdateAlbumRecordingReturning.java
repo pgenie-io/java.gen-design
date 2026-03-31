@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 
 import io.pgenie.example.myspace.musiccatalogue.Statement;
-import io.pgenie.example.myspace.musiccatalogue.codecs.Codec;
+import io.pgenie.example.myspace.musiccatalogue.codecs.Jdbc;
 import io.pgenie.example.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.example.myspace.musiccatalogue.types.RecordingInfo;
 
@@ -93,7 +93,7 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        RecordingInfo.CODEC.bind(ps, 1, this.recording());
+        Jdbc.bind(ps, 1, RecordingInfo.CODEC, this.recording());
         if (this.id() != null) {
             ps.setLong(2, this.id());
         } else {
@@ -117,10 +117,10 @@ public record UpdateAlbumRecordingReturning(RecordingInfo recording, Long id)
             String formatStr = rs.getString(4);
             String recordingStr = rs.getString(5);
             try {
-                AlbumFormat format = formatStr != null ? AlbumFormat.CODEC.parse(formatStr, 0).value : null;
-                RecordingInfo recording = recordingStr != null ? RecordingInfo.CODEC.parse(recordingStr, 0).value : null;
+                AlbumFormat format = formatStr != null ? AlbumFormat.CODEC.decodeInTextFromString(formatStr) : null;
+                RecordingInfo recording = recordingStr != null ? RecordingInfo.CODEC.decodeInTextFromString(recordingStr) : null;
                 output.add(new OutputRow(id, name, released, format, recording));
-            } catch (Codec.ParseException e) {
+            } catch (io.codemine.java.postgresql.codecs.Codec.DecodingException e) {
                 throw new IllegalStateException(e);
             }
         }
