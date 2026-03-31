@@ -4,7 +4,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Objects;
 
-import io.pgenie.example.myspace.musiccatalogue.IsolationLevel;
 import io.pgenie.example.myspace.musiccatalogue.Transaction;
 import io.pgenie.example.myspace.musiccatalogue.TransactionContext;
 import io.pgenie.example.myspace.musiccatalogue.TransactionOutcome;
@@ -27,15 +26,6 @@ public final class SelectOrInsertAlbumTransaction implements Transaction<Long> {
         this.name = Objects.requireNonNull(name, "name");
         this.released = released;
         this.format = format;
-    }
-
-    /**
-     * Use SERIALIZABLE to make the select-or-insert atomic under concurrent
-     * runs.
-     */
-    @Override
-    public IsolationLevel isolationLevel() {
-        return IsolationLevel.SERIALIZABLE;
     }
 
     @Override

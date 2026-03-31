@@ -23,10 +23,10 @@ public interface Transaction<R> {
 
     /**
      * Isolation level for the transaction. Defaults to
-     * {@link IsolationLevel#READ_COMMITTED}.
+     * {@link IsolationLevel#SERIALIZABLE}.
      */
     default IsolationLevel isolationLevel() {
-        return IsolationLevel.READ_COMMITTED;
+        return IsolationLevel.SERIALIZABLE;
     }
 
     /**
