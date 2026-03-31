@@ -13,7 +13,7 @@ class SelectGenreByArtistIT extends AbstractDatabaseIT {
 
     @Test
     void selectGenreByArtistReturnsEmptyForUnknownArtist() throws SQLException {
-        var rows = pool.execute(new SelectGenreByArtist(9999));
+        var rows = execute(new SelectGenreByArtist(9999));
         assertTrue(rows.isEmpty());
     }
 
@@ -45,7 +45,7 @@ class SelectGenreByArtistIT extends AbstractDatabaseIT {
             }
         }
 
-        var rows = pool.execute(new SelectGenreByArtist(artistId));
+        var rows = execute(new SelectGenreByArtist(artistId));
         assertEquals(1, rows.size());
         assertEquals("Jazz", rows.get(0).name());
     }

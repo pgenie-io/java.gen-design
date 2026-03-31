@@ -14,7 +14,7 @@ class InsertAlbumIT extends AbstractDatabaseIT {
 
     @Test
     void insertAlbumReturnsId() throws SQLException {
-        var result = pool.execute(new InsertAlbum(
+        var result = execute(new InsertAlbum(
                 "Dark Side of the Moon",
                 LocalDate.of(1973, 3, 1),
                 AlbumFormat.VINYL,
@@ -28,7 +28,7 @@ class InsertAlbumIT extends AbstractDatabaseIT {
 
     @Test
     void insertAlbumWithNullsReturnsId() throws SQLException {
-        var result = pool.execute(new InsertAlbum(
+        var result = execute(new InsertAlbum(
                 "Untitled",
                 null,
                 null,

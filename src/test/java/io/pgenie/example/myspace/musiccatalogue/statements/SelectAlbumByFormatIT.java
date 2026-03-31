@@ -20,13 +20,13 @@ class SelectAlbumByFormatIT extends AbstractDatabaseIT {
                 "Sausalito",
                 "USA",
                 LocalDate.of(1976, 8, 1));
-        var inserted = pool.execute(new InsertAlbum(
+        var inserted = execute(new InsertAlbum(
                 "Rumours",
                 LocalDate.of(1977, 2, 4),
                 AlbumFormat.CD,
                 recording));
 
-        var rows = pool.execute(new SelectAlbumByFormat(AlbumFormat.CD));
+        var rows = execute(new SelectAlbumByFormat(AlbumFormat.CD));
 
         assertTrue(
                 rows.stream().anyMatch(r -> r.id() == inserted.id()),
@@ -42,7 +42,7 @@ class SelectAlbumByFormatIT extends AbstractDatabaseIT {
 
     @Test
     void selectAlbumByFormatReturnsEmptyForAbsentFormat() throws SQLException {
-        var rows = pool.execute(new SelectAlbumByFormat(AlbumFormat.SACD));
+        var rows = execute(new SelectAlbumByFormat(AlbumFormat.SACD));
         assertTrue(rows.isEmpty(), "expected no SACD albums in a fresh DB");
     }
 }

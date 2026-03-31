@@ -14,7 +14,7 @@ class UpdateAlbumRecordingReturningIT extends AbstractDatabaseIT {
 
     @Test
     void updateAlbumRecordingReturningUpdatesAndReturnsRow() throws SQLException {
-        var inserted = pool.execute(new InsertAlbum(
+        var inserted = execute(new InsertAlbum(
                 "Wish You Were Here",
                 null,
                 null,
@@ -26,7 +26,7 @@ class UpdateAlbumRecordingReturningIT extends AbstractDatabaseIT {
                 "UK",
                 LocalDate.of(1975, 1, 6));
 
-        var rows = pool.execute(
+        var rows = execute(
                 new UpdateAlbumRecordingReturning(recording, inserted.id()));
 
         assertEquals(1, rows.size());
@@ -37,7 +37,7 @@ class UpdateAlbumRecordingReturningIT extends AbstractDatabaseIT {
 
     @Test
     void updateAlbumRecordingReturningNoMatchReturnsEmpty() throws SQLException {
-        var rows = pool.execute(new UpdateAlbumRecordingReturning(null, 99999L));
+        var rows = execute(new UpdateAlbumRecordingReturning(null, 99999L));
         assertTrue(rows.isEmpty());
     }
 }

@@ -1,9 +1,15 @@
 package io.pgenie.example.myspace.musiccatalogue;
 
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -18,8 +24,8 @@ import java.sql.SQLException;
  * the JVM exits, so no explicit {@code stop()} call is needed.
  *
  * <p>
- * Each test method receives a fresh {@link Pool} (created in {@link #createPool}
- * and closed in {@link #closePool}) so that connection state does not bleed
+ * Each test method receives a fresh {@link HikariDataSource} (created in {@link #createDataSource}
+ * and closed in {@link #closeDataSource}) so that connection state does not bleed
  * between tests.
  */
 public abstract class AbstractDatabaseIT {
@@ -98,20 +104,40 @@ public abstract class AbstractDatabaseIT {
         }
     }
 
-    protected Pool pool;
+    protected HikariDataSource ds;
 
     @BeforeEach
-    void createPool() {
+    void createDataSource() {
         HikariConfig cfg = new HikariConfig();
         cfg.setJdbcUrl(PG.getJdbcUrl());
         cfg.setUsername(PG.getUsername());
         cfg.setPassword(PG.getPassword());
         cfg.setMaximumPoolSize(2);
-        pool = new Pool(cfg);
+        ds = new HikariDataSource(cfg);
     }
 
     @AfterEach
-    void closePool() {
-        pool.close();
+    void closeDataSource() {
+        ds.close();
+    }
+
+    protected static <R> R execute(DataSource source, Statement<R> stmt) throws SQLException {
+        try (Connection conn = source.getConnection();
+                PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
+            stmt.bindParams(ps);
+            if (stmt.returnsRows()) {
+                ps.execute();
+                try (ResultSet rs = ps.getResultSet()) {
+                    return stmt.decodeResultSet(rs);
+                }
+            } else {
+                long affectedRows = ps.executeUpdate();
+                return stmt.decodeAffectedRows(affectedRows);
+            }
+        }
+    }
+
+    protected <R> R execute(Statement<R> stmt) throws SQLException {
+        return execute(ds, stmt);
     }
 }
