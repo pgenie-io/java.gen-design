@@ -2,8 +2,8 @@ package io.pgenie.example.myspace.musiccatalogue.types;
 
 import java.time.LocalDate;
 
-import io.pgenie.example.myspace.musiccatalogue.codecs.CompositeCodec;
-import io.pgenie.example.myspace.musiccatalogue.codecs.Codec;
+import io.codemine.java.postgresql.codecs.Codec;
+import io.codemine.java.postgresql.codecs.CompositeCodec;
 
 /**
  * Representation of the {@code recording_info} user-declared PostgreSQL

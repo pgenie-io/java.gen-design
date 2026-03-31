@@ -2,7 +2,7 @@ package io.pgenie.example.myspace.musiccatalogue.types;
 
 import java.util.Map;
 
-import io.pgenie.example.myspace.musiccatalogue.codecs.EnumCodec;
+import io.codemine.java.postgresql.codecs.EnumCodec;
 
 /**
  * Representation of the {@code album_format} user-declared PostgreSQL
