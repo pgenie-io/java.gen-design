@@ -1,13 +1,12 @@
 package io.pgenie.example.myspace.musiccatalogue.statements;
 
+import io.pgenie.example.myspace.musiccatalogue.Statement;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
-
-import io.pgenie.example.myspace.musiccatalogue.Statement;
 
 /**
  * Type-safe binding for the {@code update_album_released} query.
@@ -20,67 +19,62 @@ import io.pgenie.example.myspace.musiccatalogue.Statement;
  * where id = $id
  * }</pre>
  *
- * <h2>Source Path</h2> {@code ./queries/update_album_released.sql}
+ * <h2>Source Path</h2>
  *
- * <p>
- * Generated from SQL queries using the
- * <a href="https://pgenie.io">pGenie</a> code generator.
+ * {@code ./queries/update_album_released.sql}
+ *
+ * <p>Generated from SQL queries using the <a href="https://pgenie.io">pGenie</a> code generator.
  *
  * @param released Maps to {@code $released} in the template. Nullable.
  * @param id Maps to {@code $id} in the template. Nullable.
  */
-public record UpdateAlbumReleased(LocalDate released, Long id)
-        implements Statement<Long> {
+public record UpdateAlbumReleased(LocalDate released, Long id) implements Statement<Long> {
 
-    // -------------------------------------------------------------------------
-    // Statement implementation
-    //
-    // Result type is Long — the number of rows affected by the update.
-    // -------------------------------------------------------------------------
-    @Override
-    public String sql() {
-        return """
+  // -------------------------------------------------------------------------
+  // Statement implementation
+  //
+  // Result type is Long — the number of rows affected by the update.
+  // -------------------------------------------------------------------------
+  @Override
+  public String sql() {
+    return """
                 update album
                 set released = ?
                 where id = ?""";
-    }
+  }
 
-    @Override
-    public void bindParams(PreparedStatement ps) throws SQLException {
-        if (this.released() != null) {
-            ps.setDate(1, Date.valueOf(this.released()));
-        } else {
-            ps.setNull(1, Types.DATE);
-        }
-        if (this.id() != null) {
-            ps.setLong(2, this.id());
-        } else {
-            ps.setNull(2, Types.BIGINT);
-        }
+  @Override
+  public void bindParams(PreparedStatement ps) throws SQLException {
+    if (this.released() != null) {
+      ps.setDate(1, Date.valueOf(this.released()));
+    } else {
+      ps.setNull(1, Types.DATE);
     }
+    if (this.id() != null) {
+      ps.setLong(2, this.id());
+    } else {
+      ps.setNull(2, Types.BIGINT);
+    }
+  }
 
-    /**
-     * Returns the number of rows affected by the update.
-     */
-    @Override
-    public boolean returnsRows() {
-        return false;
-    }
+  /** Returns the number of rows affected by the update. */
+  @Override
+  public boolean returnsRows() {
+    return false;
+  }
 
-    /**
-     * Returns the number of rows affected by the update.
-     *
-     * <p>
-     * Uses {@code affectedRows} forwarded from
-     * {@link java.sql.PreparedStatement#executeUpdate()}.
-     */
-    @Override
-    public Long decodeAffectedRows(long affectedRows) throws SQLException {
-        return affectedRows;
-    }
+  /**
+   * Returns the number of rows affected by the update.
+   *
+   * <p>Uses {@code affectedRows} forwarded from {@link java.sql.PreparedStatement#executeUpdate()}.
+   */
+  @Override
+  public Long decodeAffectedRows(long affectedRows) throws SQLException {
+    return affectedRows;
+  }
 
-    @Override
-    public Long decodeResultSet(ResultSet rs) {
-        throw new UnsupportedOperationException();
-    }
+  @Override
+  public Long decodeResultSet(ResultSet rs) {
+    throw new UnsupportedOperationException();
+  }
 }
