@@ -1,9 +1,11 @@
 package io.pgenie.artifacts.myspace.musiccatalogue.codecs;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.postgresql.util.PGobject;
+import org.postgresql.util.PSQLState;
 
 import io.codemine.java.postgresql.codecs.Codec;
 
@@ -37,6 +39,18 @@ public final class Jdbc {
             obj.setValue(codec.encodeInTextToString(value));
         }
         ps.setObject(index, obj);
+    }
+
+    public static <A> A decode(ResultSet rs, int row, int col, Codec<A> codec) throws SQLException {
+        String text = rs.getString(col);
+        if (text == null) {
+            return null;
+        }
+        try {
+            return codec.decodeInTextFromString(text);
+        } catch (Codec.DecodingException e) {
+            throw new SQLException("Failed to decode cell at row " + row + ", column " + col, PSQLState.DATA_ERROR.getState(), e);
+        }
     }
 
 }

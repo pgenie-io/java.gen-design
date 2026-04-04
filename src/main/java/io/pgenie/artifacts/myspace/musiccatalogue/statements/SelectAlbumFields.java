@@ -14,6 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.postgresql.jdbc.PgResultSet;
+
+import io.codemine.java.postgresql.codecs.Codec;
+
 /**
  * Type-safe binding for the {@code select_album_fields} query.
  *
@@ -160,24 +164,17 @@ public record SelectAlbumFields(
     @Override
     public Output decodeResultSet(ResultSet rs) throws SQLException {
         Output output = new Output();
+        int row = 0;
         while (rs.next()) {
-            try {
-                long id = rs.getLong(1);
-                Optional<String> name = Optional.ofNullable(rs.getString(2));
-                Date releasedSql = rs.getDate(3);
-                Optional<LocalDate> released = Optional.ofNullable(releasedSql != null ? releasedSql.toLocalDate() : null);
-                String formatStr = rs.getString(4);
-                Optional<AlbumFormat> format = Optional.ofNullable(formatStr != null ? AlbumFormat.CODEC.decodeInTextFromString(formatStr) : null);
-                String recordingStr = rs.getString(5);
-                Optional<RecordingInfo> recording = Optional.ofNullable(recordingStr != null ? RecordingInfo.CODEC.decodeInTextFromString(recordingStr) : null);
-                String tracksStr = rs.getString(6);
-                Optional<List<TrackInfo>> tracks = Optional.ofNullable(tracksStr != null ? TrackInfo.CODEC.inDim().decodeInTextFromString(tracksStr) : null);
-                String discStr = rs.getString(7);
-                Optional<DiscInfo> disc = Optional.ofNullable(discStr != null ? DiscInfo.CODEC.decodeInTextFromString(discStr) : null);
-                output.add(new OutputRow(id, name, released, format, recording, tracks, disc));
-            } catch (io.codemine.java.postgresql.codecs.Codec.DecodingException e) {
-                throw new IllegalStateException(e);
-            }
+            long id = rs.getLong(1);
+            Optional<String> name = Optional.ofNullable(rs.getString(2));
+            Optional<LocalDate> released = Optional.ofNullable(new JdbcCodec<>(Codec.DATE).decodeNullable(rs, row, 3));
+            Optional<AlbumFormat> format = Optional.ofNullable(new JdbcCodec<>(AlbumFormat.CODEC).decodeNullable(rs, row, 4));
+            Optional<RecordingInfo> recording = Optional.ofNullable(new JdbcCodec<>(RecordingInfo.CODEC).decodeNullable(rs, row, 5));
+            Optional<List<TrackInfo>> tracks = Optional.ofNullable(new JdbcCodec<>(TrackInfo.CODEC.inDim()).decodeNullable(rs, row, 6));
+            Optional<DiscInfo> disc = Optional.ofNullable(new JdbcCodec<>(DiscInfo.CODEC).decodeNullable(rs, row, 7));
+            output.add(new OutputRow(id, name, released, format, recording, tracks, disc));
+            row++;
         }
         return output;
     }
