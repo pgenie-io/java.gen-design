@@ -9,11 +9,11 @@ import java.time.*;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-class SelectAlbumFieldsIT extends AbstractDatabaseIT {
+class SelectAlbumByIdIT extends AbstractDatabaseIT {
 
     @Test
     void executesWithDefaultValues() throws SQLException {
-        var result = execute(new SelectAlbumFields(false, false, false, false, false, false, 0L));
+        var result = execute(new SelectAlbumById(Optional.empty()));
         assertNotNull(result);
 
     }

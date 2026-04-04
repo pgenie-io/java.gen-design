@@ -1,4 +1,4 @@
-package io.pgenie.artifacts.myspace.musiccatalogue.statements;
+package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,7 +11,7 @@ import org.postgresql.util.PGobject;
  * utilities for encoding and decoding values using {@link Codec} instances and
  * binding them to JDBC statements.
  */
-final class JdbcCodec<A> {
+public final class JdbcCodec<A> {
 
     private final io.codemine.java.postgresql.codecs.Codec<A> codec;
 
