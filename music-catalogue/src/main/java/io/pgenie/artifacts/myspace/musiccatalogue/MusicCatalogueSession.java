@@ -162,16 +162,38 @@ public class MusicCatalogueSession implements AutoCloseable {
      * Execute any generated statement record.
      *
      * <p>The statement is run on a connection borrowed from the internal pool.
+     * The statement span is parented to the current OpenTelemetry span, if any.
      * Any {@link SQLException} is propagated to the caller.
+     *
+     * @param statement the statement to execute
+     * @return the decoded statement result
+     * @throws SQLException if a database access error occurs
      */
     public <R> R execute(Statement<R> statement) throws SQLException {
+        return execute(statement, Span.current());
+    }
+
+    /**
+     * Execute any generated statement record with an explicit parent span.
+     *
+     * <p>The statement is run on a connection borrowed from the internal pool.
+     * The emitted statement span will be a child of the supplied {@code parentSpan}.
+     * Any {@link SQLException} is propagated to the caller.
+     *
+     * @param statement  the statement to execute
+     * @param parentSpan the parent span for the statement trace
+     * @return the decoded statement result
+     * @throws SQLException if a database access error occurs
+     */
+    public <R> R execute(Statement<R> statement, Span parentSpan) throws SQLException {
         ensureOpen();
         Objects.requireNonNull(statement, "statement");
+        Objects.requireNonNull(parentSpan, "parentSpan");
 
         Connection connection = null;
         try {
             connection = hikariDataSource.getConnection();
-            return statementExecutor.execute(statement, connection, null);
+            return statementExecutor.execute(statement, connection, parentSpan);
         } finally {
             closeQuietly(connection);
         }
@@ -183,13 +205,31 @@ public class MusicCatalogueSession implements AutoCloseable {
      * <p>The default isolation level is {@link IsolationLevel#SERIALIZABLE}, the
      * transaction is read-write, and the maximum number of attempts is taken from
      * {@link MusicCatalogueConfig#transactionRetryAttempts()} (clamped to at least 1).
+     * The transaction span is parented to the current OpenTelemetry span, if any.
      *
      * @param transaction the transaction to execute
      * @return the transaction result
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction) throws SQLException {
-        return executeTransaction(transaction, defaultTransactionSettings());
+        return executeTransaction(transaction, defaultTransactionSettings(), Span.current());
+    }
+
+    /**
+     * Execute a transaction using default settings with an explicit parent span.
+     *
+     * <p>The default isolation level is {@link IsolationLevel#SERIALIZABLE}, the
+     * transaction is read-write, and the maximum number of attempts is taken from
+     * {@link MusicCatalogueConfig#transactionRetryAttempts()} (clamped to at least 1).
+     * The emitted transaction span will be a child of the supplied {@code parentSpan}.
+     *
+     * @param transaction the transaction to execute
+     * @param parentSpan  the parent span for the transaction trace
+     * @return the transaction result
+     * @throws SQLException if a database access error occurs
+     */
+    public <R> R executeTransaction(Transaction<R> transaction, Span parentSpan) throws SQLException {
+        return executeTransaction(transaction, defaultTransactionSettings(), parentSpan);
     }
 
     /**
@@ -207,13 +247,36 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction, TransactionSettings settings) throws SQLException {
+        return executeTransaction(transaction, settings, Span.current());
+    }
+
+    /**
+     * Execute a transaction with the supplied settings and an explicit parent span.
+     *
+     * <p>The transaction body receives an instrumented {@link
+     * io.codemine.java.postgresql.jdbc.ExecutionContext} whose statements are
+     * traced as children of the transaction span. The emitted transaction span
+     * will be a child of the supplied {@code parentSpan}. The number of retries
+     * performed by the vendor retry loop is reported via the
+     * {@code pgenie.musiccatalogue.transaction.retries} counter.
+     *
+     * @param transaction the transaction to execute
+     * @param settings    the transaction settings
+     * @param parentSpan  the parent span for the transaction trace
+     * @return the transaction result
+     * @throws SQLException if a database access error occurs
+     */
+    public <R> R executeTransaction(Transaction<R> transaction, TransactionSettings settings, Span parentSpan)
+            throws SQLException {
         ensureOpen();
         Objects.requireNonNull(transaction, "transaction");
         Objects.requireNonNull(settings, "settings");
+        Objects.requireNonNull(parentSpan, "parentSpan");
 
         Span span = tracer
                 .spanBuilder("transaction")
                 .setSpanKind(SpanKind.INTERNAL)
+                .setParent(parentSpan.storeInContext(io.opentelemetry.context.Context.current()))
                 .setAttribute(DB_SYSTEM_KEY, DB_SYSTEM)
                 .setAttribute(ISOLATION_LEVEL_KEY, isolationLevelAttribute(settings))
                 .setAttribute(MAX_ATTEMPTS_KEY, (long) settings.maxAttempts())
