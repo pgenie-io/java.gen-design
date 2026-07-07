@@ -1,0 +1,3 @@
+[submodule "vendor/postgresql-jdbc.java"]
+	path = vendor/postgresql-jdbc.java
+	url = https://github.com/codemine-io/postgresql-jdbc.java.git

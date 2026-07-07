@@ -21,9 +21,10 @@
 
 # Unignore subtrees:
 !/.github/
-!/src/
 !/migrations/
 !/examples/
+!/vendor/
+!/music-catalogue/
 
 # Ignore noise:
 .DS_Store
