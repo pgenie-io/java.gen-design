@@ -15,9 +15,6 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import io.pgenie.artifacts.myspace.musiccatalogue.exceptions.DeadlockException;
-import io.pgenie.artifacts.myspace.musiccatalogue.exceptions.SerializationFailureException;
-import io.pgenie.artifacts.myspace.musiccatalogue.exceptions.SqlExceptionClassifier;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -42,9 +39,9 @@ import org.slf4j.LoggerFactory;
  * <p>The session owns a private HikariCP connection pool built from {@link
  * MusicCatalogueConfig}. It exposes a single generic {@link #execute(Statement)}
  * method that drives the generated statement records, lambda-scoped transactions
- * with automatic retry on serialization failures and deadlocks, SQLSTATE-driven
- * unchecked exceptions, OpenTelemetry traces and metrics, SLF4J logging, a
- * health check, and graceful shutdown.
+ * with automatic retry on serialization failures and deadlocks, unchecked
+ * exceptions wrapping the original {@link SQLException}, OpenTelemetry traces
+ * and metrics, SLF4J logging, a health check, and graceful shutdown.
  *
  * <p>Instances are thread-safe; concurrent calls to {@link #execute(Statement)}
  * are supported. The session handed to a transaction {@code work} lambda is
@@ -185,8 +182,8 @@ public class MusicCatalogueSession implements AutoCloseable {
      * Execute any generated statement record.
      *
      * <p>The statement is run on a connection borrowed from the internal pool.
-     * Checked {@link SQLException}s are translated into the generated unchecked
-     * exception hierarchy.
+     * Checked {@link SQLException}s are wrapped in an unchecked
+     * {@link RuntimeException} with the original exception as the cause.
      */
     public <R> R execute(Statement<R> statement) {
         ensureOpen();
@@ -210,10 +207,10 @@ public class MusicCatalogueSession implements AutoCloseable {
             span.setStatus(StatusCode.OK);
             return result;
         } catch (SQLException e) {
-            RuntimeException classified = SqlExceptionClassifier.classify(e);
-            span.recordException(classified);
-            span.setStatus(StatusCode.ERROR, classified.getMessage());
-            throw classified;
+            RuntimeException wrapped = new RuntimeException(e);
+            span.recordException(wrapped);
+            span.setStatus(StatusCode.ERROR, wrapped.getMessage());
+            throw wrapped;
         } finally {
             if (ownsConnections) {
                 closeQuietly(connection);
@@ -304,15 +301,15 @@ public class MusicCatalogueSession implements AutoCloseable {
                 span.setStatus(StatusCode.OK);
                 return result;
             } catch (SQLException e) {
-                RuntimeException classified = SqlExceptionClassifier.classify(e);
-                span.recordException(classified);
-                span.setStatus(StatusCode.ERROR, classified.getMessage());
+                RuntimeException wrapped = new RuntimeException(e);
+                span.recordException(wrapped);
+                span.setStatus(StatusCode.ERROR, wrapped.getMessage());
 
                 rollbackQuietly(connection);
 
-                if (isRetryable(classified) && attempt < maxAttempts) {
+                if (isRetryable(e) && attempt < maxAttempts) {
                     transactionRetryCounter.add(
-                            1, Attributes.of(ERROR_TYPE_KEY, classified.getClass().getSimpleName()));
+                            1, Attributes.of(ERROR_TYPE_KEY, e.getClass().getSimpleName()));
                     logger.warn(
                             "Transaction attempt {}/{} failed with retryable SQLSTATE {}; retrying",
                             attempt,
@@ -324,20 +321,21 @@ public class MusicCatalogueSession implements AutoCloseable {
                     continue;
                 }
 
-                throw classified;
+                throw wrapped;
             } catch (RuntimeException e) {
                 span.recordException(e);
                 span.setStatus(StatusCode.ERROR, e.getMessage());
                 rollbackQuietly(connection);
 
-                if (isRetryable(e) && attempt < maxAttempts) {
+                SQLException sqlCause = e.getCause() instanceof SQLException ? (SQLException) e.getCause() : null;
+                if (sqlCause != null && isRetryable(sqlCause) && attempt < maxAttempts) {
                     transactionRetryCounter.add(
                             1, Attributes.of(ERROR_TYPE_KEY, e.getClass().getSimpleName()));
                     logger.warn(
-                            "Transaction attempt {}/{} failed with retryable {}; retrying",
+                            "Transaction attempt {}/{} failed with retryable SQLSTATE {}; retrying",
                             attempt,
                             maxAttempts,
-                            e.getClass().getSimpleName());
+                            sqlCause.getSQLState());
                     restoreAndCloseQuietly(connection, originalAutoCommit, originalIsolation);
                     span.end();
                     sleepWithInterruptHandling(retryDelayMillis(attempt));
@@ -357,8 +355,9 @@ public class MusicCatalogueSession implements AutoCloseable {
         }
     }
 
-    private static boolean isRetryable(RuntimeException e) {
-        return e instanceof SerializationFailureException || e instanceof DeadlockException;
+    private static boolean isRetryable(SQLException e) {
+        String state = e.getSQLState();
+        return "40001".equals(state) || "40P01".equals(state);
     }
 
     private static long retryDelayMillis(int attempt) {

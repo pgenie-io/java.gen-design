@@ -74,9 +74,8 @@ session.transaction(tx -> {
 
 Transactions automatically retry serialization failures and deadlocks.
 
-Errors are unchecked and discriminated by SQLSTATE, including
-`UniqueViolationException`, `ForeignKeyViolationException`, and
-`QueryTimeoutException`.
+Errors are surfaced as unchecked `RuntimeException`s with the original
+`SQLException` as their cause.
 
 Health check:
 
