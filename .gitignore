@@ -25,6 +25,7 @@
 !/examples/
 !/vendor/
 !/music-catalogue/
+!/docs/
 
 # Ignore noise:
 .DS_Store
