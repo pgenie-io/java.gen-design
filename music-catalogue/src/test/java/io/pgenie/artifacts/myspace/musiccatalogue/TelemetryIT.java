@@ -47,7 +47,7 @@ class TelemetryIT extends AbstractDatabaseIT {
         try (var telemetrySession = new MusicCatalogueSession(config)) {
             assertDoesNotThrow(() -> telemetrySession.execute(
                     new InsertAlbum("Telemetry Album", LocalDate.of(2023, 1, 1), AlbumFormat.Cd, randomRecordingInfo())));
-            assertDoesNotThrow(() -> telemetrySession.transaction(
+            assertDoesNotThrow(() -> telemetrySession.executeTransaction(
                     tx -> tx.execute(new InsertAlbum("Telemetry Tx Album", LocalDate.of(2023, 2, 1), AlbumFormat.Vinyl, randomRecordingInfo()))));
         }
 

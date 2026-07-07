@@ -2,7 +2,12 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.codemine.java.postgresql.jdbc.IsolationLevel;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.codemine.java.postgresql.jdbc.TransactionSettings;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -17,6 +22,10 @@ import org.junit.jupiter.api.Test;
 
 class TransactionRetryIT extends AbstractDatabaseIT {
 
+    private InMemoryMetricReader metricReader;
+    private SdkMeterProvider meterProvider;
+    private OpenTelemetrySdk openTelemetry;
+
     @BeforeEach
     void createCounterTable() throws SQLException {
         try (Connection conn = DriverManager.getConnection(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
@@ -27,6 +36,14 @@ class TransactionRetryIT extends AbstractDatabaseIT {
                 PreparedStatement ps = conn.prepareStatement("insert into retry_counter (id, value) values (1, 0) on conflict (id) do update set value = 0")) {
             ps.executeUpdate();
         }
+
+        metricReader = InMemoryMetricReader.create();
+        meterProvider = SdkMeterProvider.builder()
+                .registerMetricReader(metricReader)
+                .build();
+        openTelemetry = OpenTelemetrySdk.builder()
+                .setMeterProvider(meterProvider)
+                .build();
     }
 
     @AfterEach
@@ -34,6 +51,13 @@ class TransactionRetryIT extends AbstractDatabaseIT {
         try (Connection conn = DriverManager.getConnection(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
                 PreparedStatement ps = conn.prepareStatement("drop table if exists retry_counter")) {
             ps.execute();
+        }
+        if (meterProvider != null) {
+            meterProvider.forceFlush().join(5, TimeUnit.SECONDS);
+            meterProvider.close();
+        }
+        if (openTelemetry != null) {
+            openTelemetry.close();
         }
     }
 
@@ -48,18 +72,23 @@ class TransactionRetryIT extends AbstractDatabaseIT {
                 .statementTimeout(Duration.ofSeconds(5))
                 .transactionRetryAttempts(10)
                 .slowQueryLogThreshold(Duration.ofSeconds(1))
+                .openTelemetry(openTelemetry)
                 .build();
+
+        TransactionSettings settings = TransactionSettings.DEFAULT
+                .withIsolationLevel(IsolationLevel.SERIALIZABLE)
+                .withMaxAttempts(10);
 
         AtomicInteger successfulIncrements = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         Callable<Void> increment = () -> {
             try (var retrySession = new MusicCatalogueSession(config)) {
-                retrySession.transaction(Connection.TRANSACTION_SERIALIZABLE, tx -> {
-                    int current = tx.execute(new SelectCounterStatement());
-                    tx.execute(new UpdateCounterStatement(current + 1));
+                retrySession.executeTransaction(context -> {
+                    int current = context.execute(new SelectCounterStatement());
+                    context.execute(new UpdateCounterStatement(current + 1));
                     return null;
-                });
+                }, settings);
                 successfulIncrements.incrementAndGet();
             }
             return null;
@@ -78,6 +107,14 @@ class TransactionRetryIT extends AbstractDatabaseIT {
             int finalValue = finalSession.execute(new SelectCounterStatement());
             assertEquals(2, finalValue);
         }
+
+        meterProvider.forceFlush().join(5, TimeUnit.SECONDS);
+        long retryCount = metricReader.collectAllMetrics().stream()
+                .filter(metric -> metric.getName().equals("pgenie.musiccatalogue.transaction.retries"))
+                .flatMap(metric -> metric.getLongSumData().getPoints().stream())
+                .mapToLong(point -> point.getValue())
+                .sum();
+        assertTrue(retryCount > 0, "expected transaction retries counter to be non-zero, got " + retryCount);
     }
 
     private record SelectCounterStatement() implements Statement<Integer> {

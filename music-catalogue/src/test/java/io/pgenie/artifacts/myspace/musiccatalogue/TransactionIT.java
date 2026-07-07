@@ -2,12 +2,14 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.codemine.java.postgresql.jdbc.IsolationLevel;
+import io.codemine.java.postgresql.jdbc.Transaction;
+import io.codemine.java.postgresql.jdbc.TransactionSettings;
 import io.pgenie.artifacts.myspace.musiccatalogue.statements.InsertAlbum;
 import io.pgenie.artifacts.myspace.musiccatalogue.statements.SelectAlbumById;
 import io.pgenie.artifacts.myspace.musiccatalogue.statements.SelectAlbumByName;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.RecordingInfo;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -20,9 +22,9 @@ class TransactionIT extends AbstractDatabaseIT {
         String name = "Commit Test Album";
         LocalDate released = LocalDate.of(2024, 1, 15);
 
-        long id = session.transaction(tx ->
-            tx.execute(new InsertAlbum(name, released, AlbumFormat.Cd, randomRecordingInfo())).id()
-        );
+        long id = session.executeTransaction(Transaction.of(
+                new InsertAlbum(name, released, AlbumFormat.Cd, randomRecordingInfo())
+        )).id();
 
         Optional<SelectAlbumById.ResultRow> row = session.execute(new SelectAlbumById(Optional.of(id)));
 
@@ -37,8 +39,8 @@ class TransactionIT extends AbstractDatabaseIT {
         LocalDate released = LocalDate.of(2024, 2, 20);
 
         assertThrows(RuntimeException.class, () ->
-            session.transaction(tx -> {
-                tx.execute(new InsertAlbum(name, released, AlbumFormat.Digital, randomRecordingInfo()));
+            session.executeTransaction(context -> {
+                context.execute(new InsertAlbum(name, released, AlbumFormat.Digital, randomRecordingInfo()));
                 throw new RuntimeException("boom");
             })
         );
@@ -48,12 +50,20 @@ class TransactionIT extends AbstractDatabaseIT {
     }
 
     @Test
+    void customTransactionSettingsDoNotFail() throws Exception {
+        TransactionSettings settings = TransactionSettings.DEFAULT
+                .withIsolationLevel(IsolationLevel.SERIALIZABLE)
+                .withReadOnly(false)
+                .withMaxAttempts(3);
 
-    void transactionIsolationLevelOverloadDoesNotFail() throws Exception {
         assertDoesNotThrow(() ->
-            session.transaction(Connection.TRANSACTION_SERIALIZABLE, tx ->
-                tx.execute(new InsertAlbum("Serializable Album", LocalDate.of(2024, 3, 10), AlbumFormat.Vinyl, randomRecordingInfo()))
-            )
+            session.executeTransaction(
+                    Transaction.of(new InsertAlbum(
+                            "Serializable Album",
+                            LocalDate.of(2024, 3, 10),
+                            AlbumFormat.Vinyl,
+                            randomRecordingInfo())),
+                    settings)
         );
     }
 

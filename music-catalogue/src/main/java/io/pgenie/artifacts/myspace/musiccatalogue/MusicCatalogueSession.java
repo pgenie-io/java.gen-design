@@ -3,7 +3,10 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
+import io.codemine.java.postgresql.jdbc.IsolationLevel;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.codemine.java.postgresql.jdbc.Transaction;
+import io.codemine.java.postgresql.jdbc.TransactionSettings;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
@@ -15,36 +18,30 @@ import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Logger;
-import javax.sql.DataSource;
 import org.slf4j.LoggerFactory;
 
 /**
  * Self-contained, production-grade database session for the MusicCatalogue artifact.
  *
  * <p>The session owns a private HikariCP connection pool built from {@link
- * MusicCatalogueConfig}. It exposes a single generic {@link #execute(Statement)}
- * method that drives the generated statement records, lambda-scoped transactions
- * with automatic retry on serialization failures and deadlocks, checked
- * {@link SQLException}s, OpenTelemetry traces and metrics, SLF4J logging, a
- * health check, and graceful shutdown.
+ * MusicCatalogueConfig}. It exposes a generic {@link #execute(Statement)} method
+ * that drives the generated statement records, {@link #executeTransaction(Transaction)}
+ * for atomic retry-capable work, checked {@link SQLException}s, OpenTelemetry traces
+ * and metrics, SLF4J logging, a health check, and graceful shutdown.
  *
- * <p>Instances are thread-safe; concurrent calls to {@link #execute(Statement)}
- * are supported. The session handed to a transaction {@code work} lambda is
- * pinned to a single connection and must not be used concurrently.
+ * <p>Instances are thread-safe; concurrent calls to {@link #execute(Statement)} and
+ * {@link #executeTransaction(Transaction)} are supported.
  */
 public class MusicCatalogueSession implements AutoCloseable {
 
@@ -60,17 +57,18 @@ public class MusicCatalogueSession implements AutoCloseable {
     private static final AttributeKey<String> DB_USER_KEY = AttributeKey.stringKey("db.user");
     private static final AttributeKey<String> STATEMENT_NAME_KEY = AttributeKey.stringKey("pgenie.statement.name");
     private static final AttributeKey<String> POOL_NAME_KEY = AttributeKey.stringKey("pool.name");
-    private static final AttributeKey<String> ERROR_TYPE_KEY = AttributeKey.stringKey("error.type");
+    private static final AttributeKey<String> ISOLATION_LEVEL_KEY = AttributeKey.stringKey("db.transaction.isolation_level");
+    private static final AttributeKey<Long> MAX_ATTEMPTS_KEY = AttributeKey.longKey("pgenie.transaction.max_attempts");
+    private static final AttributeKey<Boolean> READ_ONLY_KEY = AttributeKey.booleanKey("pgenie.transaction.read_only");
 
     private final MusicCatalogueConfig config;
-    private final DataSource dataSource;
     private final HikariDataSource hikariDataSource;
-    private final boolean ownsConnections;
 
     private final Tracer tracer;
     private final Meter meter;
     private final LongCounter transactionRetryCounter;
     private final DoubleHistogram statementDurationHistogram;
+    private final StatementExecutor statementExecutor;
     private final List<io.opentelemetry.api.metrics.ObservableLongGauge> observableGauges = new ArrayList<>();
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -82,22 +80,8 @@ public class MusicCatalogueSession implements AutoCloseable {
      * {@link #close()} is called.
      */
     public MusicCatalogueSession(MusicCatalogueConfig config) {
-        this(config, createHikariDataSource(config), true);
-    }
-
-    private MusicCatalogueSession(MusicCatalogueConfig config, HikariDataSource hikariDataSource, boolean ownsConnections) {
-        this(config, hikariDataSource, hikariDataSource, ownsConnections);
-    }
-
-    private MusicCatalogueSession(
-            MusicCatalogueConfig config,
-            DataSource dataSource,
-            HikariDataSource hikariDataSource,
-            boolean ownsConnections) {
         this.config = Objects.requireNonNull(config, "config");
-        this.dataSource = Objects.requireNonNull(dataSource, "dataSource");
-        this.hikariDataSource = hikariDataSource;
-        this.ownsConnections = ownsConnections;
+        this.hikariDataSource = createHikariDataSource(config);
 
         OpenTelemetry openTelemetry = config.openTelemetry() != null ? config.openTelemetry() : GlobalOpenTelemetry.get();
         this.tracer = openTelemetry.getTracer(INSTRUMENTATION_SCOPE, INSTRUMENTATION_VERSION);
@@ -112,14 +96,11 @@ public class MusicCatalogueSession implements AutoCloseable {
                 .setDescription("Statement execution duration in seconds")
                 .setUnit("s")
                 .build();
+        this.statementExecutor = new StatementExecutor(config, tracer, meter, statementDurationHistogram, logger);
 
-        if (hikariDataSource != null) {
-            registerPoolGauges();
-        }
+        registerPoolGauges();
 
-        if (ownsConnections) {
-            logger.info("MusicCatalogueSession opened for jdbcUrl={} user={}", redactUrl(config.jdbcUrl()), config.user());
-        }
+        logger.info("MusicCatalogueSession opened for jdbcUrl={} user={}", redactUrl(config.jdbcUrl()), config.user());
     }
 
     private static HikariDataSource createHikariDataSource(MusicCatalogueConfig config) {
@@ -186,189 +167,90 @@ public class MusicCatalogueSession implements AutoCloseable {
     public <R> R execute(Statement<R> statement) throws SQLException {
         ensureOpen();
         Objects.requireNonNull(statement, "statement");
-        String statementName = statement.getClass().getSimpleName();
+
+        Connection connection = null;
+        try {
+            connection = hikariDataSource.getConnection();
+            return statementExecutor.execute(statement, connection, null);
+        } finally {
+            closeQuietly(connection);
+        }
+    }
+
+    /**
+     * Execute a transaction using default settings derived from the session configuration.
+     *
+     * <p>The default isolation level is {@link IsolationLevel#SERIALIZABLE}, the
+     * transaction is read-write, and the maximum number of attempts is taken from
+     * {@link MusicCatalogueConfig#transactionRetryAttempts()} (clamped to at least 1).
+     *
+     * @param transaction the transaction to execute
+     * @return the transaction result
+     * @throws SQLException if a database access error occurs
+     */
+    public <R> R executeTransaction(Transaction<R> transaction) throws SQLException {
+        return executeTransaction(transaction, defaultTransactionSettings());
+    }
+
+    /**
+     * Execute a transaction with the supplied settings.
+     *
+     * <p>The transaction body receives an instrumented {@link
+     * io.codemine.java.postgresql.jdbc.ExecutionContext} whose statements are
+     * traced as children of the transaction span. The number of retries performed
+     * by the vendor retry loop is reported via the
+     * {@code pgenie.musiccatalogue.transaction.retries} counter.
+     *
+     * @param transaction the transaction to execute
+     * @param settings    the transaction settings
+     * @return the transaction result
+     * @throws SQLException if a database access error occurs
+     */
+    public <R> R executeTransaction(Transaction<R> transaction, TransactionSettings settings) throws SQLException {
+        ensureOpen();
+        Objects.requireNonNull(transaction, "transaction");
+        Objects.requireNonNull(settings, "settings");
 
         Span span = tracer
-                .spanBuilder(statementName)
-                .setSpanKind(SpanKind.CLIENT)
+                .spanBuilder("transaction")
+                .setSpanKind(SpanKind.INTERNAL)
                 .setAttribute(DB_SYSTEM_KEY, DB_SYSTEM)
-                .setAttribute(DB_QUERY_TEXT_KEY, statement.sql())
-                .setAttribute(STATEMENT_NAME_KEY, statementName)
-                .setAttribute(DB_USER_KEY, config.user())
+                .setAttribute(ISOLATION_LEVEL_KEY, isolationLevelAttribute(settings))
+                .setAttribute(MAX_ATTEMPTS_KEY, (long) settings.maxAttempts())
+                .setAttribute(READ_ONLY_KEY, settings.readOnly())
                 .startSpan();
 
-        long startNanos = System.nanoTime();
         Connection connection = null;
         try (var scope = span.makeCurrent()) {
-            connection = dataSource.getConnection();
-            R result = executeStatement(statement, connection);
+            connection = hikariDataSource.getConnection();
+            ObservableTransactionContext context = new ObservableTransactionContext(connection, statementExecutor, span);
+            R result = transaction.executeOn(context, settings);
+            int rollbackCount = context.rollbackCount();
+            long retries = context.commitCalled() ? rollbackCount : Math.max(0, rollbackCount - 1);
+            if (retries > 0) {
+                transactionRetryCounter.add(retries);
+            }
             span.setStatus(StatusCode.OK);
             return result;
-        } catch (SQLException e) {
-            span.recordException(e);
-            span.setStatus(StatusCode.ERROR, e.getMessage());
-            throw e;
+        } catch (Throwable t) {
+            span.recordException(t);
+            span.setStatus(StatusCode.ERROR, t.getMessage());
+            throw t;
         } finally {
-            if (ownsConnections) {
-                closeQuietly(connection);
-            }
-            long durationNanos = System.nanoTime() - startNanos;
-            double durationSeconds = durationNanos / 1_000_000_000.0;
-            statementDurationHistogram.record(
-                    durationSeconds,
-                    Attributes.of(DB_QUERY_TEXT_KEY, statement.sql(), STATEMENT_NAME_KEY, statementName));
-            if (Duration.ofNanos(durationNanos).compareTo(config.slowQueryLogThreshold()) > 0) {
-                logger.warn("Slow query detected: {} took {} seconds", statementName, durationSeconds);
-            }
+            closeQuietly(connection);
             span.end();
         }
     }
 
-    private <R> R executeStatement(Statement<R> statement, Connection connection) throws SQLException {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(statement.sql())) {
-            int timeoutSeconds = (int) config.statementTimeout().toSeconds();
-            if (timeoutSeconds > 0) {
-                preparedStatement.setQueryTimeout(timeoutSeconds);
-            }
-            statement.bindParams(preparedStatement);
-
-            if (statement.returnsRows()) {
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    return statement.decodeResultSet(resultSet);
-                }
-            } else {
-                long affectedRows = preparedStatement.executeLargeUpdate();
-                return statement.decodeAffectedRows(affectedRows);
-            }
-        }
+    private TransactionSettings defaultTransactionSettings() {
+        return new TransactionSettings(
+                Optional.of(IsolationLevel.SERIALIZABLE),
+                false,
+                Math.max(1, config.transactionRetryAttempts()));
     }
 
-    /**
-     * Functional interface for work executed inside a transaction.
-     */
-    @FunctionalInterface
-    public interface TransactionWork<R> {
-
-        /**
-         * Execute the work on the given transaction-scoped session.
-         *
-         * @param session a session pinned to the transaction connection
-         * @return the result of the work
-         * @throws SQLException if a database error occurs
-         */
-        R apply(MusicCatalogueSession session) throws SQLException;
-    }
-
-    /**
-     * Run a unit of work inside a lambda-scoped transaction.
-     *
-     * <p>The lambda receives a transaction-scoped session whose {@link
-     * #execute(Statement)} calls run on the same pinned connection. The
-     * transaction commits if the lambda returns normally and rolls back if it
-     * throws. Serialization failures ({@code SQLSTATE 40001}) and deadlocks
-     * ({@code SQLSTATE 40P01}) are retried with exponential backoff and jitter
-     * up to {@link MusicCatalogueConfig#transactionRetryAttempts()} attempts.
-     *
-     * <p>The lambda must be free of non-database side effects because it may be
-     * executed more than once.
-     */
-    public <R> R transaction(TransactionWork<R> work) throws SQLException {
-        return transaction(Connection.TRANSACTION_SERIALIZABLE, work);
-    }
-
-    /**
-     * Run a unit of work inside a lambda-scoped transaction with the given
-     * isolation level.
-     *
-     * @param isolationLevel one of the {@link Connection} transaction isolation
-     *                       constants, e.g. {@link Connection#TRANSACTION_SERIALIZABLE}
-     */
-    public <R> R transaction(int isolationLevel, TransactionWork<R> work) throws SQLException {
-        ensureOpen();
-        Objects.requireNonNull(work, "work");
-        int maxAttempts = Math.max(1, config.transactionRetryAttempts());
-
-        for (int attempt = 1; ; attempt++) {
-            Span span = tracer
-                    .spanBuilder("transaction")
-                    .setSpanKind(SpanKind.INTERNAL)
-                    .setAttribute(DB_SYSTEM_KEY, DB_SYSTEM)
-                    .startSpan();
-
-            Connection connection = null;
-            boolean originalAutoCommit = true;
-            int originalIsolation = Connection.TRANSACTION_READ_COMMITTED;
-            try (var scope = span.makeCurrent()) {
-                connection = dataSource.getConnection();
-                originalAutoCommit = connection.getAutoCommit();
-                originalIsolation = connection.getTransactionIsolation();
-
-                connection.setAutoCommit(false);
-                connection.setTransactionIsolation(isolationLevel);
-
-                MusicCatalogueSession pinnedSession = new MusicCatalogueSession(
-                        config, new SingleConnectionDataSource(connection), null, false);
-
-                R result = work.apply(pinnedSession);
-                connection.commit();
-                span.setStatus(StatusCode.OK);
-                return result;
-            } catch (SQLException e) {
-                span.recordException(e);
-                span.setStatus(StatusCode.ERROR, e.getMessage());
-
-                rollbackQuietly(connection);
-
-                if (isRetryable(e) && attempt < maxAttempts) {
-                    transactionRetryCounter.add(
-                            1, Attributes.of(ERROR_TYPE_KEY, e.getClass().getSimpleName()));
-                    logger.warn(
-                            "Transaction attempt {}/{} failed with retryable SQLSTATE {}; retrying",
-                            attempt,
-                            maxAttempts,
-                            e.getSQLState());
-                    restoreAndCloseQuietly(connection, originalAutoCommit, originalIsolation);
-                    span.end();
-                    sleepWithInterruptHandling(retryDelayMillis(attempt));
-                    continue;
-                }
-
-                throw e;
-            } catch (RuntimeException e) {
-                span.recordException(e);
-                span.setStatus(StatusCode.ERROR, e.getMessage());
-                rollbackQuietly(connection);
-                throw e;
-            } catch (Error e) {
-                span.recordException(e);
-                span.setStatus(StatusCode.ERROR, e.getMessage());
-                rollbackQuietly(connection);
-                throw e;
-            } finally {
-                restoreAndCloseQuietly(connection, originalAutoCommit, originalIsolation);
-                span.end();
-            }
-        }
-    }
-
-    private static boolean isRetryable(SQLException e) {
-        String state = e.getSQLState();
-        return "40001".equals(state) || "40P01".equals(state);
-    }
-
-    private static long retryDelayMillis(int attempt) {
-        int shift = Math.min(attempt - 1, 10);
-        long base = Math.min(50L * (1L << shift), 5_000L);
-        long half = Math.max(1L, base / 2);
-        return half + ThreadLocalRandom.current().nextLong(half + 1);
-    }
-
-    private static void sleepWithInterruptHandling(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private static String isolationLevelAttribute(TransactionSettings settings) {
+        return settings.isolationLevel().map(IsolationLevel::name).orElse("default");
     }
 
     /**
@@ -385,7 +267,7 @@ public class MusicCatalogueSession implements AutoCloseable {
                 .setAttribute(DB_SYSTEM_KEY, DB_SYSTEM)
                 .startSpan();
 
-        try (Connection connection = dataSource.getConnection();
+        try (Connection connection = hikariDataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement("select 1")) {
             preparedStatement.setQueryTimeout(2);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -448,32 +330,6 @@ public class MusicCatalogueSession implements AutoCloseable {
         }
     }
 
-    private static void rollbackQuietly(Connection connection) {
-        if (connection != null) {
-            try {
-                connection.rollback();
-            } catch (SQLException ignored) {
-                // best effort
-            }
-        }
-    }
-
-    private static void restoreAndCloseQuietly(Connection connection, boolean autoCommit, int isolation) {
-        if (connection != null) {
-            try {
-                connection.setAutoCommit(autoCommit);
-            } catch (SQLException ignored) {
-                // best effort
-            }
-            try {
-                connection.setTransactionIsolation(isolation);
-            } catch (SQLException ignored) {
-                // best effort
-            }
-            closeQuietly(connection);
-        }
-    }
-
     private static void closeQuietly(AutoCloseable closeable) {
         if (closeable != null) {
             try {
@@ -497,58 +353,5 @@ public class MusicCatalogueSession implements AutoCloseable {
             return url.substring(0, passwordIndex + 9) + "***";
         }
         return url.substring(0, passwordIndex + 9) + "***" + url.substring(ampersandIndex);
-    }
-
-    /**
-     * Minimal {@link DataSource} that always returns the same pinned connection.
-     */
-    private static final class SingleConnectionDataSource implements DataSource {
-
-        private final Connection connection;
-
-        SingleConnectionDataSource(Connection connection) {
-            this.connection = Objects.requireNonNull(connection, "connection");
-        }
-
-        @Override
-        public Connection getConnection() {
-            return connection;
-        }
-
-        @Override
-        public Connection getConnection(String username, String password) {
-            return connection;
-        }
-
-        @Override
-        public PrintWriter getLogWriter() {
-            return null;
-        }
-
-        @Override
-        public void setLogWriter(PrintWriter out) {}
-
-        @Override
-        public void setLoginTimeout(int seconds) {}
-
-        @Override
-        public int getLoginTimeout() {
-            return 0;
-        }
-
-        @Override
-        public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-            throw new SQLFeatureNotSupportedException();
-        }
-
-        @Override
-        public <T> T unwrap(Class<T> iface) throws SQLException {
-            throw new SQLException("Not a wrapper");
-        }
-
-        @Override
-        public boolean isWrapperFor(Class<?> iface) {
-            return false;
-        }
     }
 }
