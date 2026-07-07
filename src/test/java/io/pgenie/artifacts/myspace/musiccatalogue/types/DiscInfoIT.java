@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class DiscInfoIT extends AbstractDatabaseIT {
 
-    private Optional<DiscInfo> roundtrip(Optional<DiscInfo> input) throws SQLException {
+    private Optional<DiscInfo> roundtrip(Optional<DiscInfo> input) {
         return execute(new Statement<Optional<DiscInfo>>() {
             @Override public String sql() { return "select ?::disc_info"; }
             @Override public void bindParams(PreparedStatement ps) throws SQLException {
@@ -31,31 +31,31 @@ class DiscInfoIT extends AbstractDatabaseIT {
     
 
     @Test
-    void roundtripNull() throws SQLException {
+    void roundtripNull() {
         assertEquals(Optional.empty(), roundtrip(Optional.empty()));
     }
     
 
     @Test
-    void roundtripCombination0() throws SQLException {
+    void roundtripCombination0() {
         var value = new DiscInfo(Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination1() throws SQLException {
+    void roundtripCombination1() {
         var value = new DiscInfo(Optional.of(""), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination2() throws SQLException {
+    void roundtripCombination2() {
         var value = new DiscInfo(Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination3() throws SQLException {
+    void roundtripCombination3() {
         var value = new DiscInfo(Optional.of(""), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }

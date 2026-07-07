@@ -1,14 +1,9 @@
 package io.pgenie.artifacts.myspace.musiccatalogue;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import javax.sql.DataSource;
 import io.codemine.java.postgresql.jdbc.Statement;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -21,8 +16,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * same point. Testcontainers' Ryuk reaper container handles cleanup when the JVM
  * exits, so no explicit {@code stop()} call is needed.
  *
- * <p>Each test method receives a fresh {@link HikariDataSource} (created in {@link
- * #createDataSource} and closed in {@link #closeDataSource}) so that connection state
+ * <p>Each test method receives a fresh {@link MusicCatalogueSession} (created in
+ * {@link #openSession} and closed in {@link #closeSession}) so that connection state
  * does not bleed between tests.
  */
 public abstract class AbstractDatabaseIT {
@@ -140,7 +135,8 @@ public abstract class AbstractDatabaseIT {
 
     /** Single container shared across all test classes in the suite. */
     protected static final PostgreSQLContainer<?> PG =
-        new PostgreSQLContainer<>("postgres:18");
+        new PostgreSQLContainer<>("postgres:18")
+            .withCommand("postgres", "-c", "max_connections=200");
 
     static {
         PG.start();
@@ -162,41 +158,32 @@ public abstract class AbstractDatabaseIT {
         }
     }
 
-    protected HikariDataSource ds;
+    protected MusicCatalogueSession session;
 
     @BeforeEach
-    void createDataSource() {
-        HikariConfig cfg = new HikariConfig();
-        cfg.setJdbcUrl(PG.getJdbcUrl());
-        cfg.setUsername(PG.getUsername());
-        cfg.setPassword(PG.getPassword());
-        cfg.setMaximumPoolSize(2);
-        ds = new HikariDataSource(cfg);
+    void openSession() {
+        MusicCatalogueConfig config = MusicCatalogueConfig
+            .builder()
+            .jdbcUrl(PG.getJdbcUrl())
+            .user(PG.getUsername())
+            .password(PG.getPassword())
+            .maximumPoolSize(1)
+            .connectionTimeout(Duration.ofSeconds(5))
+            .statementTimeout(Duration.ofSeconds(5))
+            .transactionRetryAttempts(3)
+            .slowQueryLogThreshold(Duration.ofSeconds(1))
+            .build();
+        session = new MusicCatalogueSession(config);
     }
 
     @AfterEach
-    void closeDataSource() {
-        ds.close();
-    }
-
-    protected static <R> R execute(DataSource source, Statement<R> stmt)
-            throws SQLException {
-        try (Connection conn = source.getConnection();
-                PreparedStatement ps = conn.prepareStatement(stmt.sql())) {
-            stmt.bindParams(ps);
-            if (stmt.returnsRows()) {
-                ps.execute();
-                try (ResultSet rs = ps.getResultSet()) {
-                    return stmt.decodeResultSet(rs);
-                }
-            } else {
-                long affectedRows = ps.executeUpdate();
-                return stmt.decodeAffectedRows(affectedRows);
-            }
+    void closeSession() {
+        if (session != null) {
+            session.close();
         }
     }
 
-    protected <R> R execute(Statement<R> stmt) throws SQLException {
-        return execute(ds, stmt);
+    protected <R> R execute(Statement<R> stmt) {
+        return session.execute(stmt);
     }
 }

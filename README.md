@@ -39,12 +39,49 @@ dependency:
 </dependency>
 ```
 
-Obtain a JDBC `Connection` and execute a statement:
+Open a session from config:
 
 ```java
-try (Connection conn = dataSource.getConnection()) {
-    var result = new io.pgenie.artifacts.myspace.musiccatalogue.statements.InsertAlbum(...).execute(conn);
+var config = MusicCatalogueConfig.builder()
+    .jdbcUrl("jdbc:postgresql://localhost:5432/mydb?sslmode=require")
+    .user("app")
+    .password("secret")
+    .build();
+
+try (var session = new MusicCatalogueSession(config)) {
+    ...
 }
+```
+
+`MusicCatalogueSession` is `AutoCloseable`, manages a HikariCP connection pool
+internally, and emits OpenTelemetry spans/metrics and SLF4J logs.
+
+Execute a statement:
+
+```java
+var result = session.execute(new InsertAlbum(...));
+```
+
+Run work inside a transaction:
+
+```java
+session.transaction(tx -> {
+    tx.execute(new InsertAlbum(...));
+    tx.execute(new UpdateAlbumReleased(...));
+    return ...;
+});
+```
+
+Transactions automatically retry serialization failures and deadlocks.
+
+Errors are unchecked and discriminated by SQLSTATE, including
+`UniqueViolationException`, `ForeignKeyViolationException`, and
+`QueryTimeoutException`.
+
+Health check:
+
+```java
+session.healthCheck();
 ```
 
 ## Building

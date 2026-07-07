@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class AlbumIT extends AbstractDatabaseIT {
 
-    private Optional<Album> roundtrip(Optional<Album> input) throws SQLException {
+    private Optional<Album> roundtrip(Optional<Album> input) {
         return execute(new Statement<Optional<Album>>() {
             @Override public String sql() { return "select ?::album"; }
             @Override public void bindParams(PreparedStatement ps) throws SQLException {
@@ -31,775 +31,775 @@ class AlbumIT extends AbstractDatabaseIT {
     
 
     @Test
-    void roundtripNull() throws SQLException {
+    void roundtripNull() {
         assertEquals(Optional.empty(), roundtrip(Optional.empty()));
     }
     
 
     @Test
-    void roundtripCombination0() throws SQLException {
+    void roundtripCombination0() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination1() throws SQLException {
+    void roundtripCombination1() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination2() throws SQLException {
+    void roundtripCombination2() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination3() throws SQLException {
+    void roundtripCombination3() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination4() throws SQLException {
+    void roundtripCombination4() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination5() throws SQLException {
+    void roundtripCombination5() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination6() throws SQLException {
+    void roundtripCombination6() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination7() throws SQLException {
+    void roundtripCombination7() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination8() throws SQLException {
+    void roundtripCombination8() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination9() throws SQLException {
+    void roundtripCombination9() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination10() throws SQLException {
+    void roundtripCombination10() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination11() throws SQLException {
+    void roundtripCombination11() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination12() throws SQLException {
+    void roundtripCombination12() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination13() throws SQLException {
+    void roundtripCombination13() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination14() throws SQLException {
+    void roundtripCombination14() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination15() throws SQLException {
+    void roundtripCombination15() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination16() throws SQLException {
+    void roundtripCombination16() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination17() throws SQLException {
+    void roundtripCombination17() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination18() throws SQLException {
+    void roundtripCombination18() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination19() throws SQLException {
+    void roundtripCombination19() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination20() throws SQLException {
+    void roundtripCombination20() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination21() throws SQLException {
+    void roundtripCombination21() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination22() throws SQLException {
+    void roundtripCombination22() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination23() throws SQLException {
+    void roundtripCombination23() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination24() throws SQLException {
+    void roundtripCombination24() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination25() throws SQLException {
+    void roundtripCombination25() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination26() throws SQLException {
+    void roundtripCombination26() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination27() throws SQLException {
+    void roundtripCombination27() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination28() throws SQLException {
+    void roundtripCombination28() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination29() throws SQLException {
+    void roundtripCombination29() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination30() throws SQLException {
+    void roundtripCombination30() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination31() throws SQLException {
+    void roundtripCombination31() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination32() throws SQLException {
+    void roundtripCombination32() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination33() throws SQLException {
+    void roundtripCombination33() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination34() throws SQLException {
+    void roundtripCombination34() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination35() throws SQLException {
+    void roundtripCombination35() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination36() throws SQLException {
+    void roundtripCombination36() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination37() throws SQLException {
+    void roundtripCombination37() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination38() throws SQLException {
+    void roundtripCombination38() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination39() throws SQLException {
+    void roundtripCombination39() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination40() throws SQLException {
+    void roundtripCombination40() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination41() throws SQLException {
+    void roundtripCombination41() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination42() throws SQLException {
+    void roundtripCombination42() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination43() throws SQLException {
+    void roundtripCombination43() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination44() throws SQLException {
+    void roundtripCombination44() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination45() throws SQLException {
+    void roundtripCombination45() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination46() throws SQLException {
+    void roundtripCombination46() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination47() throws SQLException {
+    void roundtripCombination47() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination48() throws SQLException {
+    void roundtripCombination48() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination49() throws SQLException {
+    void roundtripCombination49() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination50() throws SQLException {
+    void roundtripCombination50() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination51() throws SQLException {
+    void roundtripCombination51() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination52() throws SQLException {
+    void roundtripCombination52() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination53() throws SQLException {
+    void roundtripCombination53() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination54() throws SQLException {
+    void roundtripCombination54() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination55() throws SQLException {
+    void roundtripCombination55() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination56() throws SQLException {
+    void roundtripCombination56() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination57() throws SQLException {
+    void roundtripCombination57() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination58() throws SQLException {
+    void roundtripCombination58() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination59() throws SQLException {
+    void roundtripCombination59() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination60() throws SQLException {
+    void roundtripCombination60() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination61() throws SQLException {
+    void roundtripCombination61() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination62() throws SQLException {
+    void roundtripCombination62() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination63() throws SQLException {
+    void roundtripCombination63() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination64() throws SQLException {
+    void roundtripCombination64() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination65() throws SQLException {
+    void roundtripCombination65() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination66() throws SQLException {
+    void roundtripCombination66() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination67() throws SQLException {
+    void roundtripCombination67() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination68() throws SQLException {
+    void roundtripCombination68() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination69() throws SQLException {
+    void roundtripCombination69() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination70() throws SQLException {
+    void roundtripCombination70() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination71() throws SQLException {
+    void roundtripCombination71() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination72() throws SQLException {
+    void roundtripCombination72() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination73() throws SQLException {
+    void roundtripCombination73() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination74() throws SQLException {
+    void roundtripCombination74() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination75() throws SQLException {
+    void roundtripCombination75() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination76() throws SQLException {
+    void roundtripCombination76() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination77() throws SQLException {
+    void roundtripCombination77() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination78() throws SQLException {
+    void roundtripCombination78() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination79() throws SQLException {
+    void roundtripCombination79() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination80() throws SQLException {
+    void roundtripCombination80() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination81() throws SQLException {
+    void roundtripCombination81() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination82() throws SQLException {
+    void roundtripCombination82() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination83() throws SQLException {
+    void roundtripCombination83() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination84() throws SQLException {
+    void roundtripCombination84() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination85() throws SQLException {
+    void roundtripCombination85() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination86() throws SQLException {
+    void roundtripCombination86() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination87() throws SQLException {
+    void roundtripCombination87() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination88() throws SQLException {
+    void roundtripCombination88() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination89() throws SQLException {
+    void roundtripCombination89() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination90() throws SQLException {
+    void roundtripCombination90() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination91() throws SQLException {
+    void roundtripCombination91() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination92() throws SQLException {
+    void roundtripCombination92() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination93() throws SQLException {
+    void roundtripCombination93() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination94() throws SQLException {
+    void roundtripCombination94() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination95() throws SQLException {
+    void roundtripCombination95() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination96() throws SQLException {
+    void roundtripCombination96() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination97() throws SQLException {
+    void roundtripCombination97() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination98() throws SQLException {
+    void roundtripCombination98() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination99() throws SQLException {
+    void roundtripCombination99() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination100() throws SQLException {
+    void roundtripCombination100() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination101() throws SQLException {
+    void roundtripCombination101() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination102() throws SQLException {
+    void roundtripCombination102() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination103() throws SQLException {
+    void roundtripCombination103() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination104() throws SQLException {
+    void roundtripCombination104() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination105() throws SQLException {
+    void roundtripCombination105() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination106() throws SQLException {
+    void roundtripCombination106() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination107() throws SQLException {
+    void roundtripCombination107() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination108() throws SQLException {
+    void roundtripCombination108() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination109() throws SQLException {
+    void roundtripCombination109() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination110() throws SQLException {
+    void roundtripCombination110() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination111() throws SQLException {
+    void roundtripCombination111() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination112() throws SQLException {
+    void roundtripCombination112() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination113() throws SQLException {
+    void roundtripCombination113() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination114() throws SQLException {
+    void roundtripCombination114() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination115() throws SQLException {
+    void roundtripCombination115() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination116() throws SQLException {
+    void roundtripCombination116() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination117() throws SQLException {
+    void roundtripCombination117() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination118() throws SQLException {
+    void roundtripCombination118() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination119() throws SQLException {
+    void roundtripCombination119() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination120() throws SQLException {
+    void roundtripCombination120() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination121() throws SQLException {
+    void roundtripCombination121() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination122() throws SQLException {
+    void roundtripCombination122() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination123() throws SQLException {
+    void roundtripCombination123() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination124() throws SQLException {
+    void roundtripCombination124() {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination125() throws SQLException {
+    void roundtripCombination125() {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination126() throws SQLException {
+    void roundtripCombination126() {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination127() throws SQLException {
+    void roundtripCombination127() {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
