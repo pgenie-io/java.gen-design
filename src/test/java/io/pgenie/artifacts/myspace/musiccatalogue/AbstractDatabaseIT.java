@@ -183,7 +183,7 @@ public abstract class AbstractDatabaseIT {
         }
     }
 
-    protected <R> R execute(Statement<R> stmt) {
+    protected <R> R execute(Statement<R> stmt) throws SQLException {
         return session.execute(stmt);
     }
 }

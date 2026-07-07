@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
 import org.slf4j.LoggerFactory;
@@ -39,9 +38,9 @@ import org.slf4j.LoggerFactory;
  * <p>The session owns a private HikariCP connection pool built from {@link
  * MusicCatalogueConfig}. It exposes a single generic {@link #execute(Statement)}
  * method that drives the generated statement records, lambda-scoped transactions
- * with automatic retry on serialization failures and deadlocks, unchecked
- * exceptions wrapping the original {@link SQLException}, OpenTelemetry traces
- * and metrics, SLF4J logging, a health check, and graceful shutdown.
+ * with automatic retry on serialization failures and deadlocks, checked
+ * {@link SQLException}s, OpenTelemetry traces and metrics, SLF4J logging, a
+ * health check, and graceful shutdown.
  *
  * <p>Instances are thread-safe; concurrent calls to {@link #execute(Statement)}
  * are supported. The session handed to a transaction {@code work} lambda is
@@ -182,10 +181,9 @@ public class MusicCatalogueSession implements AutoCloseable {
      * Execute any generated statement record.
      *
      * <p>The statement is run on a connection borrowed from the internal pool.
-     * Checked {@link SQLException}s are wrapped in an unchecked
-     * {@link RuntimeException} with the original exception as the cause.
+     * Any {@link SQLException} is propagated to the caller.
      */
-    public <R> R execute(Statement<R> statement) {
+    public <R> R execute(Statement<R> statement) throws SQLException {
         ensureOpen();
         Objects.requireNonNull(statement, "statement");
         String statementName = statement.getClass().getSimpleName();
@@ -207,10 +205,9 @@ public class MusicCatalogueSession implements AutoCloseable {
             span.setStatus(StatusCode.OK);
             return result;
         } catch (SQLException e) {
-            RuntimeException wrapped = new RuntimeException(e);
-            span.recordException(wrapped);
-            span.setStatus(StatusCode.ERROR, wrapped.getMessage());
-            throw wrapped;
+            span.recordException(e);
+            span.setStatus(StatusCode.ERROR, e.getMessage());
+            throw e;
         } finally {
             if (ownsConnections) {
                 closeQuietly(connection);
@@ -247,6 +244,22 @@ public class MusicCatalogueSession implements AutoCloseable {
     }
 
     /**
+     * Functional interface for work executed inside a transaction.
+     */
+    @FunctionalInterface
+    public interface TransactionWork<R> {
+
+        /**
+         * Execute the work on the given transaction-scoped session.
+         *
+         * @param session a session pinned to the transaction connection
+         * @return the result of the work
+         * @throws SQLException if a database error occurs
+         */
+        R apply(MusicCatalogueSession session) throws SQLException;
+    }
+
+    /**
      * Run a unit of work inside a lambda-scoped transaction.
      *
      * <p>The lambda receives a transaction-scoped session whose {@link
@@ -259,7 +272,7 @@ public class MusicCatalogueSession implements AutoCloseable {
      * <p>The lambda must be free of non-database side effects because it may be
      * executed more than once.
      */
-    public <R> R transaction(Function<MusicCatalogueSession, R> work) {
+    public <R> R transaction(TransactionWork<R> work) throws SQLException {
         return transaction(Connection.TRANSACTION_SERIALIZABLE, work);
     }
 
@@ -270,7 +283,7 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @param isolationLevel one of the {@link Connection} transaction isolation
      *                       constants, e.g. {@link Connection#TRANSACTION_SERIALIZABLE}
      */
-    public <R> R transaction(int isolationLevel, Function<MusicCatalogueSession, R> work) {
+    public <R> R transaction(int isolationLevel, TransactionWork<R> work) throws SQLException {
         ensureOpen();
         Objects.requireNonNull(work, "work");
         int maxAttempts = Math.max(1, config.transactionRetryAttempts());
@@ -301,9 +314,8 @@ public class MusicCatalogueSession implements AutoCloseable {
                 span.setStatus(StatusCode.OK);
                 return result;
             } catch (SQLException e) {
-                RuntimeException wrapped = new RuntimeException(e);
-                span.recordException(wrapped);
-                span.setStatus(StatusCode.ERROR, wrapped.getMessage());
+                span.recordException(e);
+                span.setStatus(StatusCode.ERROR, e.getMessage());
 
                 rollbackQuietly(connection);
 
@@ -321,27 +333,11 @@ public class MusicCatalogueSession implements AutoCloseable {
                     continue;
                 }
 
-                throw wrapped;
+                throw e;
             } catch (RuntimeException e) {
                 span.recordException(e);
                 span.setStatus(StatusCode.ERROR, e.getMessage());
                 rollbackQuietly(connection);
-
-                SQLException sqlCause = e.getCause() instanceof SQLException ? (SQLException) e.getCause() : null;
-                if (sqlCause != null && isRetryable(sqlCause) && attempt < maxAttempts) {
-                    transactionRetryCounter.add(
-                            1, Attributes.of(ERROR_TYPE_KEY, e.getClass().getSimpleName()));
-                    logger.warn(
-                            "Transaction attempt {}/{} failed with retryable SQLSTATE {}; retrying",
-                            attempt,
-                            maxAttempts,
-                            sqlCause.getSQLState());
-                    restoreAndCloseQuietly(connection, originalAutoCommit, originalIsolation);
-                    span.end();
-                    sleepWithInterruptHandling(retryDelayMillis(attempt));
-                    continue;
-                }
-
                 throw e;
             } catch (Error e) {
                 span.recordException(e);

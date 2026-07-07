@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class AlbumIT extends AbstractDatabaseIT {
 
-    private Optional<Album> roundtrip(Optional<Album> input) {
+    private Optional<Album> roundtrip(Optional<Album> input) throws SQLException {
         return execute(new Statement<Optional<Album>>() {
             @Override public String sql() { return "select ?::album"; }
             @Override public void bindParams(PreparedStatement ps) throws SQLException {
@@ -31,775 +31,904 @@ class AlbumIT extends AbstractDatabaseIT {
     
 
     @Test
-    void roundtripNull() {
+
+    void roundtripNull() throws Exception {
         assertEquals(Optional.empty(), roundtrip(Optional.empty()));
     }
     
 
     @Test
-    void roundtripCombination0() {
+
+    void roundtripCombination0() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination1() {
+
+    void roundtripCombination1() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination2() {
+
+    void roundtripCombination2() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination3() {
+
+    void roundtripCombination3() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination4() {
+
+    void roundtripCombination4() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination5() {
+
+    void roundtripCombination5() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination6() {
+
+    void roundtripCombination6() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination7() {
+
+    void roundtripCombination7() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination8() {
+
+    void roundtripCombination8() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination9() {
+
+    void roundtripCombination9() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination10() {
+
+    void roundtripCombination10() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination11() {
+
+    void roundtripCombination11() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination12() {
+
+    void roundtripCombination12() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination13() {
+
+    void roundtripCombination13() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination14() {
+
+    void roundtripCombination14() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination15() {
+
+    void roundtripCombination15() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination16() {
+
+    void roundtripCombination16() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination17() {
+
+    void roundtripCombination17() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination18() {
+
+    void roundtripCombination18() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination19() {
+
+    void roundtripCombination19() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination20() {
+
+    void roundtripCombination20() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination21() {
+
+    void roundtripCombination21() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination22() {
+
+    void roundtripCombination22() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination23() {
+
+    void roundtripCombination23() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination24() {
+
+    void roundtripCombination24() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination25() {
+
+    void roundtripCombination25() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination26() {
+
+    void roundtripCombination26() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination27() {
+
+    void roundtripCombination27() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination28() {
+
+    void roundtripCombination28() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination29() {
+
+    void roundtripCombination29() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination30() {
+
+    void roundtripCombination30() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination31() {
+
+    void roundtripCombination31() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination32() {
+
+    void roundtripCombination32() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination33() {
+
+    void roundtripCombination33() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination34() {
+
+    void roundtripCombination34() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination35() {
+
+    void roundtripCombination35() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination36() {
+
+    void roundtripCombination36() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination37() {
+
+    void roundtripCombination37() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination38() {
+
+    void roundtripCombination38() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination39() {
+
+    void roundtripCombination39() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination40() {
+
+    void roundtripCombination40() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination41() {
+
+    void roundtripCombination41() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination42() {
+
+    void roundtripCombination42() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination43() {
+
+    void roundtripCombination43() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination44() {
+
+    void roundtripCombination44() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination45() {
+
+    void roundtripCombination45() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination46() {
+
+    void roundtripCombination46() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination47() {
+
+    void roundtripCombination47() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination48() {
+
+    void roundtripCombination48() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination49() {
+
+    void roundtripCombination49() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination50() {
+
+    void roundtripCombination50() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination51() {
+
+    void roundtripCombination51() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination52() {
+
+    void roundtripCombination52() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination53() {
+
+    void roundtripCombination53() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination54() {
+
+    void roundtripCombination54() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination55() {
+
+    void roundtripCombination55() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination56() {
+
+    void roundtripCombination56() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination57() {
+
+    void roundtripCombination57() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination58() {
+
+    void roundtripCombination58() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination59() {
+
+    void roundtripCombination59() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination60() {
+
+    void roundtripCombination60() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination61() {
+
+    void roundtripCombination61() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination62() {
+
+    void roundtripCombination62() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination63() {
+
+    void roundtripCombination63() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.empty());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination64() {
+
+    void roundtripCombination64() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination65() {
+
+    void roundtripCombination65() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination66() {
+
+    void roundtripCombination66() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination67() {
+
+    void roundtripCombination67() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination68() {
+
+    void roundtripCombination68() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination69() {
+
+    void roundtripCombination69() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination70() {
+
+    void roundtripCombination70() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination71() {
+
+    void roundtripCombination71() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination72() {
+
+    void roundtripCombination72() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination73() {
+
+    void roundtripCombination73() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination74() {
+
+    void roundtripCombination74() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination75() {
+
+    void roundtripCombination75() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination76() {
+
+    void roundtripCombination76() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination77() {
+
+    void roundtripCombination77() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination78() {
+
+    void roundtripCombination78() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination79() {
+
+    void roundtripCombination79() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination80() {
+
+    void roundtripCombination80() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination81() {
+
+    void roundtripCombination81() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination82() {
+
+    void roundtripCombination82() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination83() {
+
+    void roundtripCombination83() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination84() {
+
+    void roundtripCombination84() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination85() {
+
+    void roundtripCombination85() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination86() {
+
+    void roundtripCombination86() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination87() {
+
+    void roundtripCombination87() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination88() {
+
+    void roundtripCombination88() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination89() {
+
+    void roundtripCombination89() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination90() {
+
+    void roundtripCombination90() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination91() {
+
+    void roundtripCombination91() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination92() {
+
+    void roundtripCombination92() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination93() {
+
+    void roundtripCombination93() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination94() {
+
+    void roundtripCombination94() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination95() {
+
+    void roundtripCombination95() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination96() {
+
+    void roundtripCombination96() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination97() {
+
+    void roundtripCombination97() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination98() {
+
+    void roundtripCombination98() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination99() {
+
+    void roundtripCombination99() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination100() {
+
+    void roundtripCombination100() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination101() {
+
+    void roundtripCombination101() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination102() {
+
+    void roundtripCombination102() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination103() {
+
+    void roundtripCombination103() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination104() {
+
+    void roundtripCombination104() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination105() {
+
+    void roundtripCombination105() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination106() {
+
+    void roundtripCombination106() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination107() {
+
+    void roundtripCombination107() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination108() {
+
+    void roundtripCombination108() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination109() {
+
+    void roundtripCombination109() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination110() {
+
+    void roundtripCombination110() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination111() {
+
+    void roundtripCombination111() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.empty(), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination112() {
+
+    void roundtripCombination112() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination113() {
+
+    void roundtripCombination113() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination114() {
+
+    void roundtripCombination114() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination115() {
+
+    void roundtripCombination115() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination116() {
+
+    void roundtripCombination116() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination117() {
+
+    void roundtripCombination117() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination118() {
+
+    void roundtripCombination118() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination119() {
+
+    void roundtripCombination119() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.empty(), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination120() {
+
+    void roundtripCombination120() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination121() {
+
+    void roundtripCombination121() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination122() {
+
+    void roundtripCombination122() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination123() {
+
+    void roundtripCombination123() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.empty(), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination124() {
+
+    void roundtripCombination124() throws Exception {
         var value = new Album(Optional.empty(), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination125() {
+
+    void roundtripCombination125() throws Exception {
         var value = new Album(Optional.of(0L), Optional.empty(), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination126() {
+
+    void roundtripCombination126() throws Exception {
         var value = new Album(Optional.empty(), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
 
     @Test
-    void roundtripCombination127() {
+
+    void roundtripCombination127() throws Exception {
         var value = new Album(Optional.of(0L), Optional.of(""), Optional.of(LocalDate.of(2000, 1, 1)), Optional.of(AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)), Optional.of(List.of()), Optional.of(DiscInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }

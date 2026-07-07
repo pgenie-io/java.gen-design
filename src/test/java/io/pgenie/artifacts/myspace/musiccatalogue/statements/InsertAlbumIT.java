@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class InsertAlbumIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new InsertAlbum("", LocalDate.of(2000, 1, 1), AlbumFormat.CODEC.toAgnostic().random(new java.util.Random(0L), 0), RecordingInfo.CODEC.toAgnostic().random(new java.util.Random(0L), 0)));
         assertNotNull(result);
     }

@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test;
 class HealthCheckIT extends AbstractDatabaseIT {
 
     @Test
-    void healthySessionReturnsTrue() {
+
+    void healthySessionReturnsTrue() throws Exception {
         assertTrue(session.healthCheck());
     }
 
     @Test
-    void closedSessionThrowsOnHealthCheck() {
+
+    void closedSessionThrowsOnHealthCheck() throws Exception {
         session.close();
         assertThrows(IllegalStateException.class, () -> session.healthCheck());
     }

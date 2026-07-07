@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class InsertMultipleAlbumsIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new InsertMultipleAlbums(List.of(), List.of(), List.of()));
         assertNotNull(result);
     }

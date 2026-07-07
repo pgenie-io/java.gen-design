@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 class GracefulCloseIT extends AbstractDatabaseIT {
 
     @Test
+
     void closeDrainsInFlightStatement() throws Exception {
         var config = MusicCatalogueConfig.builder()
                 .jdbcUrl(PG.getJdbcUrl())
@@ -30,7 +31,8 @@ class GracefulCloseIT extends AbstractDatabaseIT {
             Future<?> future = executor.submit(() -> closeSession.execute(new SleepStatement(20, started)));
 
             // Wait until the statement has acquired a connection and is about to execute.
-            assertTrue(started.await(2, TimeUnit.SECONDS), "Statement did not start in time");
+            assertDoesNotThrow(
+                    () -> assertTrue(started.await(2, TimeUnit.SECONDS), "Statement did not start in time"));
 
             Instant closeStart = Instant.now();
             assertDoesNotThrow(closeSession::close);
@@ -48,7 +50,8 @@ class GracefulCloseIT extends AbstractDatabaseIT {
     }
 
     @Test
-    void closeIsIdempotent() {
+
+    void closeIsIdempotent() throws Exception {
         var config = MusicCatalogueConfig.defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
         var closeSession = new MusicCatalogueSession(config);
         assertDoesNotThrow(closeSession::close);

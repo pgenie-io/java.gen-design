@@ -38,7 +38,7 @@ class TransactionRetryIT extends AbstractDatabaseIT {
     }
 
     @Test
-    void serializableConflictsAreRetried() throws Exception {
+    void serializableConflictsAreRetried() throws SQLException {
         var config = MusicCatalogueConfig.builder()
                 .jdbcUrl(PG.getJdbcUrl())
                 .user(PG.getUsername())

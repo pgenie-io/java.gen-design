@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
 class TelemetryIT extends AbstractDatabaseIT {
 
     @Test
-    void statementAndTransactionSpansAndMetricsAreEmitted() {
+
+    void statementAndTransactionSpansAndMetricsAreEmitted() throws Exception {
         InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
         InMemoryMetricReader metricReader = InMemoryMetricReader.create();
 
@@ -44,8 +45,10 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .build();
 
         try (var telemetrySession = new MusicCatalogueSession(config)) {
-            telemetrySession.execute(new InsertAlbum("Telemetry Album", LocalDate.of(2023, 1, 1), AlbumFormat.Cd, randomRecordingInfo()));
-            telemetrySession.transaction(tx -> tx.execute(new InsertAlbum("Telemetry Tx Album", LocalDate.of(2023, 2, 1), AlbumFormat.Vinyl, randomRecordingInfo())));
+            assertDoesNotThrow(() -> telemetrySession.execute(
+                    new InsertAlbum("Telemetry Album", LocalDate.of(2023, 1, 1), AlbumFormat.Cd, randomRecordingInfo())));
+            assertDoesNotThrow(() -> telemetrySession.transaction(
+                    tx -> tx.execute(new InsertAlbum("Telemetry Tx Album", LocalDate.of(2023, 2, 1), AlbumFormat.Vinyl, randomRecordingInfo()))));
         }
 
         tracerProvider.forceFlush().join(5, java.util.concurrent.TimeUnit.SECONDS);

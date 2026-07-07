@@ -74,8 +74,8 @@ session.transaction(tx -> {
 
 Transactions automatically retry serialization failures and deadlocks.
 
-Errors are surfaced as unchecked `RuntimeException`s with the original
-`SQLException` as their cause.
+Errors are surfaced as checked `SQLException`s propagated directly from the
+underlying JDBC calls.
 
 Health check:
 

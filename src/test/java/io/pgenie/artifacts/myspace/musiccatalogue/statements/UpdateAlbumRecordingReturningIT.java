@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class UpdateAlbumRecordingReturningIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new UpdateAlbumRecordingReturning(Optional.empty(), 0L));
         assertNotNull(result);
     }

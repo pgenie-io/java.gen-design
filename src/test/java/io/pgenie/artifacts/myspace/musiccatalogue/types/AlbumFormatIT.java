@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class AlbumFormatIT extends AbstractDatabaseIT {
 
-    private Optional<AlbumFormat> roundtrip(Optional<AlbumFormat> input) {
+    private Optional<AlbumFormat> roundtrip(Optional<AlbumFormat> input) throws SQLException {
         return execute(new Statement<Optional<AlbumFormat>>() {
             @Override public String sql() { return "select ?::album_format"; }
             @Override public void bindParams(PreparedStatement ps) throws SQLException {
@@ -29,38 +29,45 @@ class AlbumFormatIT extends AbstractDatabaseIT {
     
 
     @Test
-    void roundtripNull() {
+
+    void roundtripNull() throws Exception {
         assertEquals(Optional.empty(), roundtrip(Optional.empty()));
     }
     
 
     @Test
-    void roundtripVinyl() {
+
+    void roundtripVinyl() throws Exception {
         assertEquals(Optional.of(AlbumFormat.Vinyl), roundtrip(Optional.of(AlbumFormat.Vinyl)));
     }
 
     @Test
-    void roundtripCd() {
+
+    void roundtripCd() throws Exception {
         assertEquals(Optional.of(AlbumFormat.Cd), roundtrip(Optional.of(AlbumFormat.Cd)));
     }
 
     @Test
-    void roundtripCassette() {
+
+    void roundtripCassette() throws Exception {
         assertEquals(Optional.of(AlbumFormat.Cassette), roundtrip(Optional.of(AlbumFormat.Cassette)));
     }
 
     @Test
-    void roundtripDigital() {
+
+    void roundtripDigital() throws Exception {
         assertEquals(Optional.of(AlbumFormat.Digital), roundtrip(Optional.of(AlbumFormat.Digital)));
     }
 
     @Test
-    void roundtripDvdAudio() {
+
+    void roundtripDvdAudio() throws Exception {
         assertEquals(Optional.of(AlbumFormat.DvdAudio), roundtrip(Optional.of(AlbumFormat.DvdAudio)));
     }
 
     @Test
-    void roundtripSacd() {
+
+    void roundtripSacd() throws Exception {
         assertEquals(Optional.of(AlbumFormat.Sacd), roundtrip(Optional.of(AlbumFormat.Sacd)));
     }
 }

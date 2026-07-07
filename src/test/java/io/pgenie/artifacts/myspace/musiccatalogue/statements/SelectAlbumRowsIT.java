@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class SelectAlbumRowsIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new SelectAlbumRows());
         assertNotNull(result);
     }

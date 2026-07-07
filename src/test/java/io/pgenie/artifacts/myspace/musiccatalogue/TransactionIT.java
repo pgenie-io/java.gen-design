@@ -8,6 +8,7 @@ import io.pgenie.artifacts.myspace.musiccatalogue.statements.SelectAlbumByName;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.RecordingInfo;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class TransactionIT extends AbstractDatabaseIT {
 
     @Test
-    void transactionCommitsInsertedRow() {
+    void transactionCommitsInsertedRow() throws SQLException {
         String name = "Commit Test Album";
         LocalDate released = LocalDate.of(2024, 1, 15);
 
@@ -31,7 +32,7 @@ class TransactionIT extends AbstractDatabaseIT {
     }
 
     @Test
-    void transactionRollsBackOnException() {
+    void transactionRollsBackOnException() throws SQLException {
         String name = "Rollback Test Album";
         LocalDate released = LocalDate.of(2024, 2, 20);
 
@@ -47,7 +48,8 @@ class TransactionIT extends AbstractDatabaseIT {
     }
 
     @Test
-    void transactionIsolationLevelOverloadDoesNotFail() {
+
+    void transactionIsolationLevelOverloadDoesNotFail() throws Exception {
         assertDoesNotThrow(() ->
             session.transaction(Connection.TRANSACTION_SERIALIZABLE, tx ->
                 tx.execute(new InsertAlbum("Serializable Album", LocalDate.of(2024, 3, 10), AlbumFormat.Vinyl, randomRecordingInfo()))

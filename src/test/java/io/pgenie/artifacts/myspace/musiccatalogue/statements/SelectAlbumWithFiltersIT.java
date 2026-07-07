@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class SelectAlbumWithFiltersIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new SelectAlbumWithFilters(false, false, false, false, false, false, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), false, false));
         assertNotNull(result);
     }

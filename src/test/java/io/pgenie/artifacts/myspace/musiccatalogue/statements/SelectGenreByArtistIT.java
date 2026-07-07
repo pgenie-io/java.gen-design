@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class SelectGenreByArtistIT extends AbstractDatabaseIT {
     @Test
-    void executesWithDefaultValues() {
+
+    void executesWithDefaultValues() throws Exception {
         var result = execute(new SelectGenreByArtist(0));
         assertNotNull(result);
     }

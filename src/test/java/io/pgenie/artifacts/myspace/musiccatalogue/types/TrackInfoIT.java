@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class TrackInfoIT extends AbstractDatabaseIT {
 
-    private Optional<TrackInfo> roundtrip(Optional<TrackInfo> input) {
+    private Optional<TrackInfo> roundtrip(Optional<TrackInfo> input) throws SQLException {
         return execute(new Statement<Optional<TrackInfo>>() {
             @Override public String sql() { return "select ?::track_info"; }
             @Override public void bindParams(PreparedStatement ps) throws SQLException {
@@ -31,13 +31,15 @@ class TrackInfoIT extends AbstractDatabaseIT {
     
 
     @Test
-    void roundtripNull() {
+
+    void roundtripNull() throws Exception {
         assertEquals(Optional.empty(), roundtrip(Optional.empty()));
     }
     
 
     @Test
-    void roundtripCombination0() {
+
+    void roundtripCombination0() throws Exception {
         var value = new TrackInfo("", 0, List.of());
         assertEquals(Optional.of(value), roundtrip(Optional.of(value)));
     }
