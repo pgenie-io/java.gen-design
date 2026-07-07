@@ -2,10 +2,7 @@ package io.pgenie.artifacts.myspace.musiccatalogue.types;
 
 import java.time.*;
 import java.util.List;
-import java.util.Optional;
-
-import io.codemine.java.postgresql.codecs.Codec;
-import io.codemine.java.postgresql.codecs.CompositeCodec;
+import io.codemine.java.postgresql.jdbc.Codec;
 
 /**
  * Representation of the {@code recording_info} user-declared PostgreSQL
@@ -22,27 +19,26 @@ public record RecordingInfo(
         /**
          * Maps to {@code studio_name}.
          */
-        Optional<String> studioName,
+        String studioName,
         /**
          * Maps to {@code city}.
          */
-        Optional<String> city,
+        String city,
         /**
          * Maps to {@code country}.
          */
-        Optional<String> country,
+        String country,
         /**
          * Maps to {@code recorded_date}.
          */
-        Optional<LocalDate> recordedDate) {
+        LocalDate recordedDate) {
 
-    public static final CompositeCodec<RecordingInfo> CODEC = new CompositeCodec<>(
+    public static final Codec<RecordingInfo> CODEC = Codec.<RecordingInfo>composite(
             "public", "recording_info",
-            (String studioName) -> (String city) -> (String country) -> (LocalDate recordedDate) -> new RecordingInfo(
-                    Optional.ofNullable(studioName), Optional.ofNullable(city), Optional.ofNullable(country), Optional.ofNullable(recordedDate)),
-            new CompositeCodec.Field<>("studio_name", row -> row.studioName().orElse(null), Codec.TEXT),
-            new CompositeCodec.Field<>("city", row -> row.city().orElse(null), Codec.TEXT),
-            new CompositeCodec.Field<>("country", row -> row.country().orElse(null), Codec.TEXT),
-            new CompositeCodec.Field<>("recorded_date", row -> row.recordedDate().orElse(null), Codec.DATE));
+            objects -> new RecordingInfo((String) objects[0], (String) objects[1], (String) objects[2], (LocalDate) objects[3]),
+            Codec.<RecordingInfo, String>field("studio_name", Codec.TEXT, RecordingInfo::studioName),
+            Codec.<RecordingInfo, String>field("city", Codec.TEXT, RecordingInfo::city),
+            Codec.<RecordingInfo, String>field("country", Codec.TEXT, RecordingInfo::country),
+            Codec.<RecordingInfo, LocalDate>field("recorded_date", Codec.DATE, RecordingInfo::recordedDate));
 
 }

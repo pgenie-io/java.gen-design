@@ -12,39 +12,49 @@ import io.codemine.java.postgresql.jdbc.Statement;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
 
 /**
- * Type-safe binding for the {@code select_album_by_name} query.
+ * Type-safe binding for the {@code insert_multiple_albums} query.
  *
  * <h2>SQL Template</h2>
  *
  * <pre>{@code
- * select 
- *   id,
- *   name,
- *   released,
- *   format,
- *   recording
- * from album
- * where name = $name
+ * -- This is an example of a bulk-insert (batch-insert) technique.
+ * -- We pass in all fields as arrays of the same size, and we unnest it to insert multiple rows at once.
+ * insert into album (name, released, format)
+ * select *
+ * from unnest(
+ *   $name::text[],
+ *   $released::date[],
+ *   $format::album_format[]
+ * )
+ * returning id
  * }</pre>
  *
- * <h2>Source Path</h2> {@code ./queries/select_album_by_name.sql}
+ * <h2>Source Path</h2> {@code ./queries/insert_multiple_albums.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  */
-public record SelectAlbumByName(
+public record InsertMultipleAlbums(
         /**
          * Maps to {@code $name} in the template.
          */
-        String name)
-        implements Statement<SelectAlbumByName.Result> {
+        List<String> name,
+        /**
+         * Maps to {@code $released} in the template.
+         */
+        List<LocalDate> released,
+        /**
+         * Maps to {@code $format} in the template.
+         */
+        List<AlbumFormat> format)
+        implements Statement<InsertMultipleAlbums.Result> {
     
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
     /**
-     * Result of the statement parameterised by {@link SelectAlbumByName}.
+     * Result of the statement parameterised by {@link InsertMultipleAlbums}.
      */
     public static final class Result extends ArrayList<ResultRow> {
         Result() {}
@@ -57,23 +67,7 @@ public record SelectAlbumByName(
             /**
              * Maps to the {@code id} result-set column.
              */
-            long id,
-            /**
-             * Maps to the {@code name} result-set column.
-             */
-            String name,
-            /**
-             * Maps to the {@code released} result-set column. Nullable.
-             */
-            Optional<LocalDate> released,
-            /**
-             * Maps to the {@code format} result-set column. Nullable.
-             */
-            Optional<AlbumFormat> format,
-            /**
-             * Maps to the {@code recording} result-set column. Nullable.
-             */
-            Optional<RecordingInfo> recording) {}
+            long id) {}
     
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -81,20 +75,24 @@ public record SelectAlbumByName(
     @Override
     public String sql() {
         return """
-               select 
-                 id,
-                 name,
-                 released,
-                 format,
-                 recording
-               from album
-               where name = ?
+               -- This is an example of a bulk-insert (batch-insert) technique.
+               -- We pass in all fields as arrays of the same size, and we unnest it to insert multiple rows at once.
+               insert into album (name, released, format)
+               select *
+               from unnest(
+                 ?::text[],
+                 ?::date[],
+                 ?::album_format[]::album_format[]
+               )
+               returning id
                """;
     }
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        Codec.TEXT.bind(ps, 1, this.name());
+        Codec.TEXT.inDim().bind(ps, 1, this.name());
+        Codec.DATE.inDim().bind(ps, 2, this.released());
+        AlbumFormat.CODEC.inDim().bind(ps, 3, this.format());
     }
 
     @Override
@@ -109,12 +107,8 @@ public record SelectAlbumByName(
         
         while (rs.next()) {
             long idCol = Codec.INT8.decodeNonNullable(rs, row, 1);
-            String nameCol = Codec.TEXT.decodeNonNullable(rs, row, 2);
-            Optional<LocalDate> releasedCol = Codec.DATE.decodeOptional(rs, row, 3);
-            Optional<AlbumFormat> formatCol = AlbumFormat.CODEC.decodeOptional(rs, row, 4);
-            Optional<RecordingInfo> recordingCol = RecordingInfo.CODEC.decodeOptional(rs, row, 5);
 
-            output.add(new ResultRow(idCol, nameCol, releasedCol, formatCol, recordingCol));
+            output.add(new ResultRow(idCol));
             row++;
         }
 
@@ -122,7 +116,7 @@ public record SelectAlbumByName(
     }
 
     @Override
-    public SelectAlbumByName.Result decodeAffectedRows(long affectedRows) {
+    public InsertMultipleAlbums.Result decodeAffectedRows(long affectedRows) {
         throw new UnsupportedOperationException();
     }
 }

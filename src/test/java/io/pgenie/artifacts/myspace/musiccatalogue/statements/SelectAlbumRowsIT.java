@@ -4,17 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.pgenie.artifacts.myspace.musiccatalogue.AbstractDatabaseIT;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
+import io.codemine.java.postgresql.jdbc.Codec;
+import io.codemine.java.postgresql.codecs.*;
+import java.util.List;
 import java.sql.SQLException;
 import java.time.*;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-class SelectAlbumFieldsIT extends AbstractDatabaseIT {
-
+class SelectAlbumRowsIT extends AbstractDatabaseIT {
     @Test
     void executesWithDefaultValues() throws SQLException {
-        var result = execute(new SelectAlbumFields(false, false, false, false, false, false, 0L));
+        var result = execute(new SelectAlbumRows());
         assertNotNull(result);
-
     }
 }

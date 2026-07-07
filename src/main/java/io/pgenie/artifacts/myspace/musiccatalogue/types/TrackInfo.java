@@ -2,10 +2,7 @@ package io.pgenie.artifacts.myspace.musiccatalogue.types;
 
 import java.time.*;
 import java.util.List;
-import java.util.Optional;
-
-import io.codemine.java.postgresql.codecs.Codec;
-import io.codemine.java.postgresql.codecs.CompositeCodec;
+import io.codemine.java.postgresql.jdbc.Codec;
 
 /**
  * Representation of the {@code track_info} user-declared PostgreSQL
@@ -22,22 +19,21 @@ public record TrackInfo(
         /**
          * Maps to {@code title}.
          */
-        Optional<String> title,
+        String title,
         /**
          * Maps to {@code duration_seconds}.
          */
-        Optional<Integer> durationSeconds,
+        int durationSeconds,
         /**
          * Maps to {@code tags}.
          */
-        Optional<List<Optional<String>>> tags) {
+        List<String> tags) {
 
-    public static final CompositeCodec<TrackInfo> CODEC = new CompositeCodec<>(
+    public static final Codec<TrackInfo> CODEC = Codec.<TrackInfo>composite(
             "public", "track_info",
-            (String title) -> (Integer durationSeconds) -> (List<String> tags) -> new TrackInfo(
-                    Optional.ofNullable(title), Optional.ofNullable(durationSeconds), Optional.ofNullable(tags).map(list -> list.stream().map(Optional::ofNullable).toList())),
-            new CompositeCodec.Field<>("title", row -> row.title().orElse(null), Codec.TEXT),
-            new CompositeCodec.Field<>("duration_seconds", row -> row.durationSeconds().orElse(null), Codec.INT4),
-            new CompositeCodec.Field<>("tags", row -> row.tags().map(list -> list.stream().map(o -> o.orElse(null)).toList()).orElse(null), Codec.TEXT.inDim()));
+            objects -> new TrackInfo((String) objects[0], (Integer) objects[1], (List<String>) objects[2]),
+            Codec.<TrackInfo, String>field("title", Codec.TEXT, TrackInfo::title),
+            Codec.<TrackInfo, Integer>field("duration_seconds", Codec.INT4, TrackInfo::durationSeconds),
+            Codec.<TrackInfo, List<String>>field("tags", Codec.TEXT.inDim(), TrackInfo::tags));
 
 }

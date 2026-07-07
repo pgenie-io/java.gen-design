@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import javax.sql.DataSource;
+import io.codemine.java.postgresql.jdbc.Statement;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -126,7 +127,15 @@ public abstract class AbstractDatabaseIT {
         """,
         """
         CREATE INDEX ON album (recording);
+        """,
         """
+        -- Add support for hierarchical genre paths.
+        create extension if not exists ltree;
+
+        alter table genre
+        add column path ltree not null;
+
+        create index on genre using gist (path);"""
     };
 
     /** Single container shared across all test classes in the suite. */

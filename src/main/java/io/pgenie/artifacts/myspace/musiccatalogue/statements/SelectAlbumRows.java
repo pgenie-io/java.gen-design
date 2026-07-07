@@ -9,39 +9,45 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
 
 /**
- * Type-safe binding for the {@code update_album_released} query.
+ * Type-safe binding for the {@code select_album_rows} query.
  *
  * <h2>SQL Template</h2>
  *
  * <pre>{@code
- * update album
- * set released = $released
- * where id = $id
+ * select (album.*)::album from album
  * }</pre>
  *
- * <h2>Source Path</h2> {@code ./queries/update_album_released.sql}
+ * <h2>Source Path</h2> {@code ./queries/select_album_rows.sql}
  *
  * <p>
  * Generated from SQL queries using the
  * <a href="https://pgenie.io">pGenie</a> code generator.
  */
-public record UpdateAlbumReleased(
-        /**
-         * Maps to {@code $released} in the template. Nullable.
-         */
-        Optional<LocalDate> released,
-        /**
-         * Maps to {@code $id} in the template.
-         */
-        long id)
-        implements Statement<Long> {
+public record SelectAlbumRows(
+        )
+        implements Statement<SelectAlbumRows.Result> {
     
     // -------------------------------------------------------------------------
     // Result type
     // -------------------------------------------------------------------------
-    
+    /**
+     * Result of the statement parameterised by {@link SelectAlbumRows}.
+     */
+    public static final class Result extends ArrayList<ResultRow> {
+        Result() {}
+    }
+
+    /**
+     * Row of {@link Result}.
+     */
+    public record ResultRow(
+            /**
+             * Maps to the {@code album} result-set column. Nullable.
+             */
+            Optional<Album> album) {}
     
     // -------------------------------------------------------------------------
     // Statement implementation
@@ -49,40 +55,37 @@ public record UpdateAlbumReleased(
     @Override
     public String sql() {
         return """
-               update album
-               set released = ?
-               where id = ?
+               select (album.*)::album from album
                """;
     }
 
     @Override
     public void bindParams(PreparedStatement ps) throws SQLException {
-        Codec.DATE.bind(ps, 1, this.released().orElse(null));
-        Codec.INT8.bind(ps, 2, this.id());
+        
     }
 
-    /**
-     * Returns the number of rows affected by the statement.
-     */
     @Override
     public boolean returnsRows() {
-        return false;
-    }
-
-    /**
-     * Returns the number of rows affected by the statement.
-     *
-     * <p>
-     * Uses {@code affectedRows} forwarded from
-     * {@link java.sql.PreparedStatement#executeUpdate()}.
-     */
-    @Override
-    public Long decodeAffectedRows(long affectedRows) throws SQLException {
-        return affectedRows;
+        return true;
     }
 
     @Override
-    public Long decodeResultSet(ResultSet rs) {
+    public Result decodeResultSet(ResultSet rs) throws SQLException {
+        Result output = new Result();
+        int row = 0;
+        
+        while (rs.next()) {
+            Optional<Album> albumCol = Album.CODEC.decodeOptional(rs, row, 1);
+
+            output.add(new ResultRow(albumCol));
+            row++;
+        }
+
+        return output;
+    }
+
+    @Override
+    public SelectAlbumRows.Result decodeAffectedRows(long affectedRows) {
         throw new UnsupportedOperationException();
     }
 }

@@ -12,10 +12,10 @@ import java.time.*;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-class SelectAlbumWithFiltersIT extends AbstractDatabaseIT {
+class InsertMultipleAlbumsIT extends AbstractDatabaseIT {
     @Test
     void executesWithDefaultValues() throws SQLException {
-        var result = execute(new SelectAlbumWithFilters(false, false, false, false, false, false, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), false, false));
+        var result = execute(new InsertMultipleAlbums(List.of(), List.of(), List.of()));
         assertNotNull(result);
     }
 }
