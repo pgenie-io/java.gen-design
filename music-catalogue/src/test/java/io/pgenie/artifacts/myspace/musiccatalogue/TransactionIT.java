@@ -51,7 +51,7 @@ class TransactionIT extends AbstractDatabaseIT {
 
     @Test
     void customTransactionSettingsDoNotFail() throws Exception {
-        TransactionSettings settings = TransactionSettings.DEFAULT
+        TransactionSettings settings = TransactionSettings.SERIALIZABLE_WRITE
                 .withIsolationLevel(IsolationLevel.SERIALIZABLE)
                 .withReadOnly(false)
                 .withMaxAttempts(3);

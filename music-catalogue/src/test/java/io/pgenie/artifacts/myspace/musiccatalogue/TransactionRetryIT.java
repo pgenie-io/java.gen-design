@@ -75,10 +75,6 @@ class TransactionRetryIT extends AbstractDatabaseIT {
                 .openTelemetry(openTelemetry)
                 .build();
 
-        TransactionSettings settings = TransactionSettings.DEFAULT
-                .withIsolationLevel(IsolationLevel.SERIALIZABLE)
-                .withMaxAttempts(10);
-
         AtomicInteger successfulIncrements = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
@@ -88,7 +84,7 @@ class TransactionRetryIT extends AbstractDatabaseIT {
                     int current = context.execute(new SelectCounterStatement());
                     context.execute(new UpdateCounterStatement(current + 1));
                     return null;
-                }, settings);
+                }, TransactionSettings.SERIALIZABLE_WRITE);
                 successfulIncrements.incrementAndGet();
             }
             return null;
