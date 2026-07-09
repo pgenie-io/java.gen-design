@@ -63,17 +63,14 @@ class TransactionRetryIT extends AbstractDatabaseIT {
 
     @Test
     void serializableConflictsAreRetried() throws SQLException {
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl(PG.getJdbcUrl())
-                .user(PG.getUsername())
-                .password(PG.getPassword())
-                .maximumPoolSize(4)
-                .connectionTimeout(Duration.ofSeconds(5))
-                .statementTimeout(Duration.ofSeconds(5))
-                .transactionRetryAttempts(10)
-                .slowQueryLogThreshold(Duration.ofSeconds(1))
-                .openTelemetry(openTelemetry)
-                .build();
+        var config = MusicCatalogueConfig
+                .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withMaximumPoolSize(4)
+                .withConnectionTimeout(Duration.ofSeconds(5))
+                .withStatementTimeout(Duration.ofSeconds(5))
+                .withTransactionRetryAttempts(10)
+                .withSlowQueryLogThreshold(Duration.ofSeconds(1))
+                .withOpenTelemetry(openTelemetry);
 
         AtomicInteger successfulIncrements = new AtomicInteger(0);
         ExecutorService executor = Executors.newFixedThreadPool(2);
