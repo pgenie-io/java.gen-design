@@ -206,7 +206,7 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction) throws SQLException {
-        return executeTransaction(transaction, defaultTransactionSettings(), Span.current());
+        return executeTransaction(transaction, defaultTransactionSettings(config), Span.current());
     }
 
     /**
@@ -223,7 +223,7 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction, Span parentSpan) throws SQLException {
-        return executeTransaction(transaction, defaultTransactionSettings(), parentSpan);
+        return executeTransaction(transaction, defaultTransactionSettings(config), parentSpan);
     }
 
     /**
@@ -280,8 +280,7 @@ public class MusicCatalogueSession implements AutoCloseable {
                 Connection connection = hikariDataSource.getConnection()) {
             ObservableTransactionContext context = new ObservableTransactionContext(connection, statementExecutor, span);
             R result = transaction.executeOn(context, settings);
-            int rollbackCount = context.rollbackCount();
-            long retries = context.commitCalled() ? rollbackCount : Math.max(0, rollbackCount - 1);
+            long retries = retryCount(context.commitCalled(), context.rollbackCount());
             if (retries > 0) {
                 transactionRetryCounter.add(retries);
             }
@@ -296,15 +295,25 @@ public class MusicCatalogueSession implements AutoCloseable {
         }
     }
 
-    private TransactionSettings defaultTransactionSettings() {
+    static TransactionSettings defaultTransactionSettings(MusicCatalogueConfig config) {
         return new TransactionSettings(
                 IsolationLevel.SERIALIZABLE,
                 false,
                 Math.max(1, config.transactionRetryAttempts()));
     }
 
-    private static String isolationLevelAttribute(TransactionSettings settings) {
+    static String isolationLevelAttribute(TransactionSettings settings) {
         return settings.isolationLevel().name();
+    }
+
+    /**
+     * Number of retries performed by the vendor retry loop, derived from the transaction
+     * context's commit/rollback bookkeeping: every rollback is a retry, except a final
+     * rollback that is never followed by a commit (an exhausted or aborted transaction),
+     * which counts as the last failed attempt rather than a retry of a subsequent one.
+     */
+    static long retryCount(boolean commitCalled, int rollbackCount) {
+        return commitCalled ? rollbackCount : Math.max(0, rollbackCount - 1);
     }
 
     /**
@@ -381,7 +390,7 @@ public class MusicCatalogueSession implements AutoCloseable {
         logger.info("MusicCatalogueSession closed");
     }
 
-    private static String redactUrl(String url) {
+    static String redactUrl(String url) {
         if (url == null) {
             return null;
         }

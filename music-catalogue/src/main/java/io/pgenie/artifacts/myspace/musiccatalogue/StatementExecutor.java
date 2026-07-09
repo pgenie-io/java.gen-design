@@ -1,6 +1,7 @@
 package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.codemine.java.postgresql.jdbc.StatementBatch;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.DoubleHistogram;
@@ -14,7 +15,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -103,31 +103,16 @@ final class StatementExecutor {
         Objects.requireNonNull(statements, "statements");
         Objects.requireNonNull(connection, "connection");
 
-        List<Statement<R>> batch = new ArrayList<>();
-        String sql = null;
-        for (Statement<R> statement : statements) {
-            Statement<R> batchStatement = Objects.requireNonNull(statement, "statement");
-            if (batchStatement.returnsRows()) {
-                throw new IllegalArgumentException("Batch execution is only supported for update statements");
-            }
-            String statementSql = Objects.requireNonNull(batchStatement.sql(), "sql");
-            if (sql == null) {
-                sql = statementSql;
-            } else if (!sql.equals(statementSql)) {
-                throw new IllegalArgumentException("All batch statements must use the same SQL text");
-            }
-            batch.add(batchStatement);
-        }
-
-        if (sql == null) {
+        StatementBatch<R> batch = new StatementBatch<>(statements);
+        if (batch.size() == 0) {
             return List.of();
         }
 
         String statementName = "batch";
-        Span span = startBatchSpan(statementName, sql, batch.size(), parentSpan);
+        Span span = startBatchSpan(statementName, batch.sql(), batch.size(), parentSpan);
         long startNanos = System.nanoTime();
         try (var scope = span.makeCurrent()) {
-            List<R> results = executeBatch(batch, sql, connection);
+            List<R> results = batch.execute(connection, (int) config.statementTimeout().toSeconds());
             span.setStatus(StatusCode.OK);
             return results;
         } catch (Throwable t) {
@@ -135,12 +120,12 @@ final class StatementExecutor {
             span.setStatus(StatusCode.ERROR, t.getMessage());
             throw t;
         } finally {
-            recordDuration(sql, statementName, batch.size(), startNanos);
+            recordDuration(batch.sql(), statementName, batch.size(), startNanos);
             span.end();
         }
     }
 
-    private Span startStatementSpan(String statementName, String sql, Span parentSpan) {
+    Span startStatementSpan(String statementName, String sql, Span parentSpan) {
         var builder = tracer
                 .spanBuilder(statementName)
                 .setSpanKind(SpanKind.CLIENT)
@@ -154,7 +139,7 @@ final class StatementExecutor {
         return builder.startSpan();
     }
 
-    private Span startBatchSpan(String statementName, String sql, int batchSize, Span parentSpan) {
+    Span startBatchSpan(String statementName, String sql, int batchSize, Span parentSpan) {
         var builder = tracer
                 .spanBuilder(statementName)
                 .setSpanKind(SpanKind.CLIENT)
@@ -182,25 +167,6 @@ final class StatementExecutor {
                 long affectedRows = preparedStatement.executeLargeUpdate();
                 return statement.decodeAffectedRows(affectedRows);
             }
-        }
-    }
-
-    private <R> List<R> executeBatch(List<Statement<R>> statements, String sql, Connection connection)
-            throws SQLException {
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            applyQueryTimeout(preparedStatement);
-            for (Statement<R> statement : statements) {
-                preparedStatement.clearParameters();
-                statement.bindParams(preparedStatement);
-                preparedStatement.addBatch();
-            }
-
-            int[] affectedRows = preparedStatement.executeBatch();
-            List<R> results = new ArrayList<>(affectedRows.length);
-            for (int index = 0; index < affectedRows.length; index++) {
-                results.add(statements.get(index).decodeAffectedRows(affectedRows[index]));
-            }
-            return results;
         }
     }
 
