@@ -14,8 +14,8 @@ class HealthCheckIT extends AbstractDatabaseIT {
 
     @Test
 
-    void closedSessionThrowsOnHealthCheck() throws Exception {
+    void closedSessionHealthCheckReturnsFalse() throws Exception {
         session.close();
-        assertThrows(IllegalStateException.class, () -> session.healthCheck());
+        assertFalse(session.healthCheck());
     }
 }

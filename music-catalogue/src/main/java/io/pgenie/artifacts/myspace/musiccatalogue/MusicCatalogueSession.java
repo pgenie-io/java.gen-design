@@ -27,7 +27,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.LoggerFactory;
 
@@ -186,16 +185,11 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R execute(Statement<R> statement, Span parentSpan) throws SQLException {
-        ensureOpen();
         Objects.requireNonNull(statement, "statement");
         Objects.requireNonNull(parentSpan, "parentSpan");
 
-        Connection connection = null;
-        try {
-            connection = hikariDataSource.getConnection();
+        try (Connection connection = hikariDataSource.getConnection()) {
             return statementExecutor.execute(statement, connection, parentSpan);
-        } finally {
-            closeQuietly(connection);
         }
     }
 
@@ -268,7 +262,6 @@ public class MusicCatalogueSession implements AutoCloseable {
      */
     public <R> R executeTransaction(Transaction<R> transaction, TransactionSettings settings, Span parentSpan)
             throws SQLException {
-        ensureOpen();
         Objects.requireNonNull(transaction, "transaction");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(parentSpan, "parentSpan");
@@ -283,9 +276,8 @@ public class MusicCatalogueSession implements AutoCloseable {
                 .setAttribute(READ_ONLY_KEY, settings.readOnly())
                 .startSpan();
 
-        Connection connection = null;
-        try (var scope = span.makeCurrent()) {
-            connection = hikariDataSource.getConnection();
+        try (var scope = span.makeCurrent();
+                Connection connection = hikariDataSource.getConnection()) {
             ObservableTransactionContext context = new ObservableTransactionContext(connection, statementExecutor, span);
             R result = transaction.executeOn(context, settings);
             int rollbackCount = context.rollbackCount();
@@ -300,20 +292,19 @@ public class MusicCatalogueSession implements AutoCloseable {
             span.setStatus(StatusCode.ERROR, t.getMessage());
             throw t;
         } finally {
-            closeQuietly(connection);
             span.end();
         }
     }
 
     private TransactionSettings defaultTransactionSettings() {
         return new TransactionSettings(
-                Optional.of(IsolationLevel.SERIALIZABLE),
+                IsolationLevel.SERIALIZABLE,
                 false,
                 Math.max(1, config.transactionRetryAttempts()));
     }
 
     private static String isolationLevelAttribute(TransactionSettings settings) {
-        return settings.isolationLevel().map(IsolationLevel::name).orElse("default");
+        return settings.isolationLevel().name();
     }
 
     /**
@@ -323,7 +314,6 @@ public class MusicCatalogueSession implements AutoCloseable {
      * otherwise
      */
     public boolean healthCheck() {
-        ensureOpen();
         Span span = tracer
                 .spanBuilder("healthCheck")
                 .setSpanKind(SpanKind.CLIENT)
@@ -361,6 +351,10 @@ public class MusicCatalogueSession implements AutoCloseable {
         logger.info("Closing MusicCatalogueSession");
         Span span = tracer.spanBuilder("musiccatalogue.session.close").startSpan();
         try {
+            for (var gauge : observableGauges) {
+                gauge.close();
+            }
+
             if (hikariDataSource != null && !hikariDataSource.isClosed()) {
                 HikariPoolMXBean pool = hikariDataSource.getHikariPoolMXBean();
                 Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
@@ -385,22 +379,6 @@ public class MusicCatalogueSession implements AutoCloseable {
             span.end();
         }
         logger.info("MusicCatalogueSession closed");
-    }
-
-    private void ensureOpen() {
-        if (closed.get()) {
-            throw new IllegalStateException("MusicCatalogueSession is closed");
-        }
-    }
-
-    private static void closeQuietly(AutoCloseable closeable) {
-        if (closeable != null) {
-            try {
-                closeable.close();
-            } catch (Exception ignored) {
-                // best effort
-            }
-        }
     }
 
     private static String redactUrl(String url) {

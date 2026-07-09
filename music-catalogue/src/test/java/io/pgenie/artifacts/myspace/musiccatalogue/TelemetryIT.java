@@ -46,29 +46,35 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .openTelemetry(openTelemetry)
                 .build();
 
-        try (var telemetrySession = new MusicCatalogueSession(config)) {
+        var telemetrySession = new MusicCatalogueSession(config);
+        try {
             assertDoesNotThrow(() -> telemetrySession.execute(
                     new InsertAlbum("Telemetry Album", LocalDate.of(2023, 1, 1), AlbumFormat.Cd, randomRecordingInfo())));
             assertDoesNotThrow(() -> telemetrySession.executeTransaction(
                     tx -> tx.execute(new InsertAlbum("Telemetry Tx Album", LocalDate.of(2023, 2, 1), AlbumFormat.Vinyl, randomRecordingInfo()))));
+
+            tracerProvider.forceFlush().join(5, java.util.concurrent.TimeUnit.SECONDS);
+            meterProvider.forceFlush().join(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            var spans = spanExporter.getFinishedSpanItems();
+            assertFalse(spans.isEmpty());
+            var spanNames = spans.stream().map(s -> s.getName()).toList();
+            assertTrue(spanNames.contains("InsertAlbum"), "Expected InsertAlbum span, got: " + spanNames);
+            assertTrue(spanNames.contains("transaction"), "Expected transaction span, got: " + spanNames);
+
+            // Metrics must be collected while the session (and its pool gauges) is still
+            // open: session.close() unregisters the gauge callbacks, so collecting after
+            // close would miss the pool.connections.* series.
+            var metrics = metricReader.collectAllMetrics();
+            assertFalse(metrics.isEmpty(), "Expected metrics to be emitted");
+            var metricNames = metrics.stream().map(MetricData::getName).toList();
+            assertTrue(metricNames.contains("pgenie.musiccatalogue.statement.duration"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.active"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.idle"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.total"), metricNames::toString);
+        } finally {
+            telemetrySession.close();
         }
-
-        tracerProvider.forceFlush().join(5, java.util.concurrent.TimeUnit.SECONDS);
-        meterProvider.forceFlush().join(5, java.util.concurrent.TimeUnit.SECONDS);
-
-        var spans = spanExporter.getFinishedSpanItems();
-        assertFalse(spans.isEmpty());
-        var spanNames = spans.stream().map(s -> s.getName()).toList();
-        assertTrue(spanNames.contains("InsertAlbum"), "Expected InsertAlbum span, got: " + spanNames);
-        assertTrue(spanNames.contains("transaction"), "Expected transaction span, got: " + spanNames);
-
-        var metrics = metricReader.collectAllMetrics();
-        assertFalse(metrics.isEmpty(), "Expected metrics to be emitted");
-        var metricNames = metrics.stream().map(MetricData::getName).toList();
-        assertTrue(metricNames.contains("pgenie.musiccatalogue.statement.duration"), metricNames::toString);
-        assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.active"), metricNames::toString);
-        assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.idle"), metricNames::toString);
-        assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.total"), metricNames::toString);
     }
 
     @Test

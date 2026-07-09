@@ -56,7 +56,7 @@ class GracefulCloseIT extends AbstractDatabaseIT {
         var closeSession = new MusicCatalogueSession(config);
         assertDoesNotThrow(closeSession::close);
         assertDoesNotThrow(closeSession::close);
-        assertThrows(IllegalStateException.class, () -> closeSession.execute(new SleepStatement(1, new CountDownLatch(0))));
+        assertThrows(SQLException.class, () -> closeSession.execute(new SleepStatement(1, new CountDownLatch(0))));
     }
 
     private record SleepStatement(int seconds, CountDownLatch started) implements Statement<Long> {
