@@ -18,32 +18,15 @@ class MusicCatalogueSessionTest {
 
     @Test
     void defaultTransactionSettingsUsesSerializableReadWrite() {
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl("jdbc:postgresql://localhost/test")
-                .user("user")
-                .password("pw")
-                .transactionRetryAttempts(5)
-                .build();
+        var config = MusicCatalogueConfig
+                .defaults("jdbc:postgresql://localhost/test", "user", "pw")
+                .withTransactionRetryAttempts(5);
 
         TransactionSettings settings = MusicCatalogueSession.defaultTransactionSettings(config);
 
         assertEquals(IsolationLevel.SERIALIZABLE, settings.isolationLevel());
         assertFalse(settings.readOnly());
         assertEquals(5, settings.maxAttempts());
-    }
-
-    @Test
-    void defaultTransactionSettingsClampsNonPositiveRetryAttemptsToOne() {
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl("jdbc:postgresql://localhost/test")
-                .user("user")
-                .password("pw")
-                .transactionRetryAttempts(0)
-                .build();
-
-        TransactionSettings settings = MusicCatalogueSession.defaultTransactionSettings(config);
-
-        assertEquals(1, settings.maxAttempts());
     }
 
     @Test

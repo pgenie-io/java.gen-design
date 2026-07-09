@@ -299,7 +299,7 @@ public class MusicCatalogueSession implements AutoCloseable {
         return new TransactionSettings(
                 IsolationLevel.SERIALIZABLE,
                 false,
-                Math.max(1, config.transactionRetryAttempts()));
+                config.transactionRetryAttempts());
     }
 
     static String isolationLevelAttribute(TransactionSettings settings) {
