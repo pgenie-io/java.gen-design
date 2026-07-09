@@ -16,14 +16,11 @@ class GracefulCloseIT extends AbstractDatabaseIT {
     @Test
 
     void closeDrainsInFlightStatement() throws Exception {
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl(PG.getJdbcUrl())
-                .user(PG.getUsername())
-                .password(PG.getPassword())
-                .maximumPoolSize(2)
-                .connectionTimeout(Duration.ofSeconds(1))
-                .statementTimeout(Duration.ofSeconds(30))
-                .build();
+        var config = MusicCatalogueConfig
+                .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withMaximumPoolSize(2)
+                .withConnectionTimeout(Duration.ofSeconds(1))
+                .withStatementTimeout(Duration.ofSeconds(30));
 
         try (var closeSession = new MusicCatalogueSession(config)) {
             CountDownLatch started = new CountDownLatch(1);
