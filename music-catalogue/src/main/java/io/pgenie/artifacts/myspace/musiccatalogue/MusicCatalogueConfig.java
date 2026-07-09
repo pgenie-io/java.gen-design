@@ -7,186 +7,213 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * Immutable, builder-style configuration for a {@code MusicCatalogueSession}.
+ * Configuration for a {@code MusicCatalogueSession}.
  *
  * <p>The JDBC URL identifies the database host, port and name; credentials are supplied
  * separately so that they can be rotated, stored in secret managers, or overridden without
  * touching the connection string.</p>
+ *
+ * @param jdbcUrl the JDBC URL of the PostgreSQL database
+ * @param user the database user
+ * @param password the database password
+ * @param maximumPoolSize maximum number of connections maintained in the HikariCP pool; at least 1
+ * @param connectionTimeout maximum time to wait for a connection from the pool before failing; must not be negative
+ * @param statementTimeout maximum time a single statement is allowed to execute before being cancelled; zero means no timeout; must not be negative
+ * @param transactionRetryAttempts number of times a transaction is retried when a serialization failure or deadlock is detected; at least 1
+ * @param slowQueryLogThreshold queries running longer than this threshold are logged as slow queries; zero logs every query; must not be negative
+ * @param openTelemetry OpenTelemetry instance used for tracing and metrics
  */
-public final class MusicCatalogueConfig {
-
-    private final String jdbcUrl;
-    private final String user;
-    private final String password;
-    private final int maximumPoolSize;
-    private final Duration connectionTimeout;
-    private final Duration statementTimeout;
-    private final int transactionRetryAttempts;
-    private final Duration slowQueryLogThreshold;
-    private final OpenTelemetry openTelemetry;
-
-    private MusicCatalogueConfig(Builder builder) {
-        this.jdbcUrl = Objects.requireNonNull(builder.jdbcUrl, "jdbcUrl");
-        this.user = Objects.requireNonNull(builder.user, "user");
-        this.password = Objects.requireNonNull(builder.password, "password");
-        this.maximumPoolSize = builder.maximumPoolSize;
-        this.connectionTimeout = builder.connectionTimeout;
-        this.statementTimeout = builder.statementTimeout;
-        this.transactionRetryAttempts = builder.transactionRetryAttempts;
-        this.slowQueryLogThreshold = builder.slowQueryLogThreshold;
-        this.openTelemetry = builder.openTelemetry;
-    }
+public record MusicCatalogueConfig(
+        String jdbcUrl,
+        String user,
+        String password,
+        int maximumPoolSize,
+        Duration connectionTimeout,
+        Duration statementTimeout,
+        int transactionRetryAttempts,
+        Duration slowQueryLogThreshold,
+        OpenTelemetry openTelemetry) {
 
     /**
-     * Creates a new builder.
+     * Validates the record's components.
      *
-     * @return a fresh {@link Builder}
+     * @throws NullPointerException if any reference-typed component is null
+     * @throws IllegalArgumentException if a numeric or duration component violates its stated bound
      */
-    public static Builder builder() {
-        return new Builder();
+    public MusicCatalogueConfig {
+        Objects.requireNonNull(jdbcUrl, "jdbcUrl");
+        Objects.requireNonNull(user, "user");
+        Objects.requireNonNull(password, "password");
+        Objects.requireNonNull(connectionTimeout, "connectionTimeout");
+        Objects.requireNonNull(statementTimeout, "statementTimeout");
+        Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
+        Objects.requireNonNull(openTelemetry, "openTelemetry");
+        if (maximumPoolSize < 1) {
+            throw new IllegalArgumentException("maximumPoolSize must be at least 1");
+        }
+        if (connectionTimeout.isNegative()) {
+            throw new IllegalArgumentException("connectionTimeout must not be negative");
+        }
+        if (statementTimeout.isNegative()) {
+            throw new IllegalArgumentException("statementTimeout must not be negative");
+        }
+        if (transactionRetryAttempts < 1) {
+            throw new IllegalArgumentException("transactionRetryAttempts must be at least 1");
+        }
+        if (slowQueryLogThreshold.isNegative()) {
+            throw new IllegalArgumentException("slowQueryLogThreshold must not be negative");
+        }
     }
 
     /**
-     * Convenience factory that returns a config with all optional values set to their defaults.
+     * Creates a config with the given required fields and default values for everything else:
+     * a maximum pool size of 10, a 30-second connection timeout, a 30-second statement timeout,
+     * 3 transaction retry attempts, a 1-second slow-query-log threshold, and the global
+     * {@link OpenTelemetry} instance.
      *
-     * @param jdbcUrl  the JDBC URL of the PostgreSQL database
-     * @param user     the database user
+     * @param jdbcUrl the JDBC URL of the PostgreSQL database
+     * @param user the database user
      * @param password the database password
-     * @return a fully-built config
+     * @return a fully-populated config
+     * @throws NullPointerException if any argument is null
      */
     public static MusicCatalogueConfig defaults(String jdbcUrl, String user, String password) {
-        return builder()
-            .jdbcUrl(jdbcUrl)
-            .user(user)
-            .password(password)
-            .build();
-    }
-
-    /** JDBC URL of the PostgreSQL database. Credentials are supplied separately via {@link #user()} and {@link #password()}. */
-    public String jdbcUrl() {
-        return jdbcUrl;
-    }
-
-    /** Database user. Kept separate from {@link #jdbcUrl()} so that credentials can be rotated independently. */
-    public String user() {
-        return user;
-    }
-
-    /** Database password. Kept separate from {@link #jdbcUrl()} so that credentials can be rotated independently. */
-    public String password() {
-        return password;
-    }
-
-    /** Maximum number of connections maintained in the HikariCP pool. */
-    public int maximumPoolSize() {
-        return maximumPoolSize;
-    }
-
-    /** Maximum time to wait for a connection from the pool before failing. */
-    public Duration connectionTimeout() {
-        return connectionTimeout;
-    }
-
-    /** Maximum time a single statement is allowed to execute before being cancelled. */
-    public Duration statementTimeout() {
-        return statementTimeout;
-    }
-
-    /** Number of times a transaction is retried when a serialization failure or deadlock is detected. */
-    public int transactionRetryAttempts() {
-        return transactionRetryAttempts;
-    }
-
-    /** Queries running longer than this threshold are logged as slow queries. */
-    public Duration slowQueryLogThreshold() {
-        return slowQueryLogThreshold;
-    }
-
-    /** OpenTelemetry instance used for tracing and metrics. */
-    public OpenTelemetry openTelemetry() {
-        return openTelemetry;
+        return new MusicCatalogueConfig(
+                jdbcUrl,
+                user,
+                password,
+                10,
+                Duration.ofSeconds(30),
+                Duration.ofSeconds(30),
+                3,
+                Duration.ofSeconds(1),
+                GlobalOpenTelemetry.get());
     }
 
     /**
-     * Builder for {@link MusicCatalogueConfig}.
+     * Returns a copy of this config with the given JDBC URL.
+     *
+     * @param jdbcUrl the JDBC URL to apply
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code jdbcUrl} is null
      */
-    public static final class Builder {
+    public MusicCatalogueConfig withJdbcUrl(String jdbcUrl) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        private String jdbcUrl;
-        private String user;
-        private String password;
-        private int maximumPoolSize = 10;
-        private Duration connectionTimeout = Duration.ofSeconds(30);
-        private Duration statementTimeout = Duration.ofSeconds(30);
-        private int transactionRetryAttempts = 3;
-        private Duration slowQueryLogThreshold = Duration.ofSeconds(1);
-        private OpenTelemetry openTelemetry = GlobalOpenTelemetry.get();
+    /**
+     * Returns a copy of this config with the given database user.
+     *
+     * @param user the user to apply
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code user} is null
+     */
+    public MusicCatalogueConfig withUser(String user) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        private Builder() {
-        }
+    /**
+     * Returns a copy of this config with the given database password.
+     *
+     * @param password the password to apply
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code password} is null
+     */
+    public MusicCatalogueConfig withPassword(String password) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the JDBC URL of the PostgreSQL database. */
-        public Builder jdbcUrl(String jdbcUrl) {
-            this.jdbcUrl = jdbcUrl;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given maximum pool size.
+     *
+     * @param maximumPoolSize the maximum pool size to apply; at least 1
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws IllegalArgumentException if {@code maximumPoolSize} is less than 1
+     */
+    public MusicCatalogueConfig withMaximumPoolSize(int maximumPoolSize) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the database user. */
-        public Builder user(String user) {
-            this.user = user;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given connection timeout.
+     *
+     * @param connectionTimeout the connection timeout to apply; must not be negative
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code connectionTimeout} is null
+     * @throws IllegalArgumentException if {@code connectionTimeout} is negative
+     */
+    public MusicCatalogueConfig withConnectionTimeout(Duration connectionTimeout) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the database password. */
-        public Builder password(String password) {
-            this.password = password;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given statement timeout.
+     *
+     * @param statementTimeout the statement timeout to apply; zero means no timeout; must not be negative
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code statementTimeout} is null
+     * @throws IllegalArgumentException if {@code statementTimeout} is negative
+     */
+    public MusicCatalogueConfig withStatementTimeout(Duration statementTimeout) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the maximum pool size. */
-        public Builder maximumPoolSize(int maximumPoolSize) {
-            this.maximumPoolSize = maximumPoolSize;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given transaction retry attempts.
+     *
+     * @param transactionRetryAttempts the number of retry attempts to apply; at least 1
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws IllegalArgumentException if {@code transactionRetryAttempts} is less than 1
+     */
+    public MusicCatalogueConfig withTransactionRetryAttempts(int transactionRetryAttempts) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the maximum wait time for a connection from the pool. */
-        public Builder connectionTimeout(Duration connectionTimeout) {
-            this.connectionTimeout = connectionTimeout;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given slow-query-log threshold.
+     *
+     * @param slowQueryLogThreshold the threshold to apply; zero logs every query; must not be negative
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code slowQueryLogThreshold} is null
+     * @throws IllegalArgumentException if {@code slowQueryLogThreshold} is negative
+     */
+    public MusicCatalogueConfig withSlowQueryLogThreshold(Duration slowQueryLogThreshold) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the per-statement execution timeout. */
-        public Builder statementTimeout(Duration statementTimeout) {
-            this.statementTimeout = statementTimeout;
-            return this;
-        }
+    /**
+     * Returns a copy of this config with the given OpenTelemetry instance.
+     *
+     * @param openTelemetry the OpenTelemetry instance to apply
+     * @return a new {@code MusicCatalogueConfig}
+     * @throws NullPointerException if {@code openTelemetry} is null
+     */
+    public MusicCatalogueConfig withOpenTelemetry(OpenTelemetry openTelemetry) {
+        return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
+                statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
 
-        /** Sets the number of transaction retry attempts on serialization failures or deadlocks. */
-        public Builder transactionRetryAttempts(int transactionRetryAttempts) {
-            this.transactionRetryAttempts = transactionRetryAttempts;
-            return this;
-        }
-
-        /** Sets the threshold above which a query is considered slow and logged. */
-        public Builder slowQueryLogThreshold(Duration slowQueryLogThreshold) {
-            this.slowQueryLogThreshold = slowQueryLogThreshold;
-            return this;
-        }
-
-        /** Sets the OpenTelemetry instance used for tracing and metrics. */
-        public Builder openTelemetry(OpenTelemetry openTelemetry) {
-            this.openTelemetry = openTelemetry;
-            return this;
-        }
-
-        /**
-         * Builds the configuration.
-         *
-         * @return a new immutable {@link MusicCatalogueConfig}
-         * @throws NullPointerException if any required field is missing
-         */
-        public MusicCatalogueConfig build() {
-            return new MusicCatalogueConfig(this);
-        }
+    /** Redacts {@link #password()} so it can't leak into logs or exception messages. */
+    @Override
+    public String toString() {
+        return "MusicCatalogueConfig["
+                + "jdbcUrl=" + jdbcUrl
+                + ", user=" + user
+                + ", password=***"
+                + ", maximumPoolSize=" + maximumPoolSize
+                + ", connectionTimeout=" + connectionTimeout
+                + ", statementTimeout=" + statementTimeout
+                + ", transactionRetryAttempts=" + transactionRetryAttempts
+                + ", slowQueryLogThreshold=" + slowQueryLogThreshold
+                + ", openTelemetry=" + openTelemetry
+                + ']';
     }
 }
