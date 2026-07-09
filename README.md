@@ -42,11 +42,10 @@ dependency:
 Open a session from config:
 
 ```java
-var config = MusicCatalogueConfig.builder()
-    .jdbcUrl("jdbc:postgresql://localhost:5432/mydb?sslmode=require")
-    .user("app")
-    .password("secret")
-    .build();
+var config = MusicCatalogueConfig.defaults(
+    "jdbc:postgresql://localhost:5432/mydb?sslmode=require",
+    "app",
+    "secret");
 
 try (var session = new MusicCatalogueSession(config)) {
     ...
