@@ -39,12 +39,9 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .setMeterProvider(meterProvider)
                 .build();
 
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl(PG.getJdbcUrl())
-                .user(PG.getUsername())
-                .password(PG.getPassword())
-                .openTelemetry(openTelemetry)
-                .build();
+        var config = MusicCatalogueConfig
+                .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withOpenTelemetry(openTelemetry);
 
         var telemetrySession = new MusicCatalogueSession(config);
         try {
@@ -89,12 +86,9 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .setTracerProvider(tracerProvider)
                 .build();
 
-        var config = MusicCatalogueConfig.builder()
-                .jdbcUrl(PG.getJdbcUrl())
-                .user(PG.getUsername())
-                .password(PG.getPassword())
-                .openTelemetry(openTelemetry)
-                .build();
+        var config = MusicCatalogueConfig
+                .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withOpenTelemetry(openTelemetry);
 
         io.opentelemetry.api.trace.Span parentSpan;
         try (var telemetrySession = new MusicCatalogueSession(config)) {
