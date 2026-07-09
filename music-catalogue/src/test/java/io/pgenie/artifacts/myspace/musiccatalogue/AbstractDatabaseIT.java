@@ -163,16 +163,12 @@ public abstract class AbstractDatabaseIT {
     @BeforeEach
     void openSession() {
         MusicCatalogueConfig config = MusicCatalogueConfig
-            .builder()
-            .jdbcUrl(PG.getJdbcUrl())
-            .user(PG.getUsername())
-            .password(PG.getPassword())
-            .maximumPoolSize(1)
-            .connectionTimeout(Duration.ofSeconds(5))
-            .statementTimeout(Duration.ofSeconds(5))
-            .transactionRetryAttempts(3)
-            .slowQueryLogThreshold(Duration.ofSeconds(1))
-            .build();
+            .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+            .withMaximumPoolSize(1)
+            .withConnectionTimeout(Duration.ofSeconds(5))
+            .withStatementTimeout(Duration.ofSeconds(5))
+            .withTransactionRetryAttempts(3)
+            .withSlowQueryLogThreshold(Duration.ofSeconds(1));
         session = new MusicCatalogueSession(config);
     }
 
