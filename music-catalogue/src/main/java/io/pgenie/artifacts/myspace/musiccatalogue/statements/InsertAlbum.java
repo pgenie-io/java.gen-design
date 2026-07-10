@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.java.richclient.StatementMetadata;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
 
 /**
@@ -45,7 +46,7 @@ public record InsertAlbum(
          * Maps to {@code $recording} in the template.
          */
         RecordingInfo recording)
-        implements Statement<InsertAlbum.Result> {
+        implements Statement<InsertAlbum.Result>, StatementMetadata {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -96,5 +97,15 @@ public record InsertAlbum(
     @Override
     public InsertAlbum.Result decodeAffectedRows(long affectedRows) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String operationName() {
+        return "INSERT";
+    }
+
+    @Override
+    public String collectionName() {
+        return "albums";
     }
 }

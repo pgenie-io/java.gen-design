@@ -12,6 +12,8 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.util.List;
+import io.pgenie.java.richclient.RichClientConfig;
+import io.pgenie.java.richclient.Session;
 import io.pgenie.artifacts.myspace.musiccatalogue.statements.InsertAlbum;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.AlbumFormat;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.RecordingInfo;
@@ -46,11 +48,15 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .setMeterProvider(meterProvider)
                 .build();
 
-        var config = MusicCatalogueConfig
+        var config = RichClientConfig
                 .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue")
                 .withOpenTelemetry(openTelemetry);
 
-        var telemetrySession = new MusicCatalogueSession(config);
+        var telemetrySession = new Session(config);
         try {
             assertDoesNotThrow(() -> telemetrySession.execute(
                     new InsertAlbum("Telemetry Album", LocalDate.of(2023, 1, 1), AlbumFormat.Cd, randomRecordingInfo())));
@@ -116,12 +122,16 @@ class TelemetryIT extends AbstractDatabaseIT {
                 .setTracerProvider(tracerProvider)
                 .build();
 
-        var config = MusicCatalogueConfig
+        var config = RichClientConfig
                 .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue")
                 .withOpenTelemetry(openTelemetry);
 
         io.opentelemetry.api.trace.Span parentSpan;
-        try (var telemetrySession = new MusicCatalogueSession(config)) {
+        try (var telemetrySession = new Session(config)) {
             parentSpan = openTelemetry.getTracer("test").spanBuilder("test-parent").startSpan();
             telemetrySession.execute(
                     new InsertAlbum("Parented Album", LocalDate.of(2023, 3, 1), AlbumFormat.Cd, randomRecordingInfo()),

@@ -8,6 +8,8 @@ import io.codemine.java.postgresql.jdbc.TransactionSettings;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
+import io.pgenie.java.richclient.RichClientConfig;
+import io.pgenie.java.richclient.Session;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -63,8 +65,12 @@ class TransactionRetryIT extends AbstractDatabaseIT {
 
     @Test
     void serializableConflictsAreRetried() throws SQLException {
-        var config = MusicCatalogueConfig
+        var config = RichClientConfig
                 .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue")
                 .withMaximumPoolSize(4)
                 .withConnectionTimeout(Duration.ofSeconds(5))
                 .withStatementTimeout(Duration.ofSeconds(5))
@@ -76,7 +82,7 @@ class TransactionRetryIT extends AbstractDatabaseIT {
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         Callable<Void> increment = () -> {
-            try (var retrySession = new MusicCatalogueSession(config)) {
+            try (var retrySession = new Session(config)) {
                 retrySession.executeTransaction(context -> {
                     int current = context.execute(new SelectCounterStatement());
                     context.execute(new UpdateCounterStatement(current + 1));
@@ -96,7 +102,7 @@ class TransactionRetryIT extends AbstractDatabaseIT {
 
         assertEquals(2, successfulIncrements.get());
 
-        try (var finalSession = new MusicCatalogueSession(config)) {
+        try (var finalSession = new Session(config)) {
             int finalValue = finalSession.execute(new SelectCounterStatement());
             assertEquals(2, finalValue);
         }

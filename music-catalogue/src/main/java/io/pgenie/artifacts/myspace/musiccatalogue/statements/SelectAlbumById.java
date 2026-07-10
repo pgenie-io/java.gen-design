@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.java.richclient.StatementMetadata;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
 
 /**
@@ -35,7 +36,7 @@ public record SelectAlbumById(
          * Maps to {@code $id} in the template. Nullable.
          */
         Optional<Long> id)
-        implements Statement<Optional<SelectAlbumById.ResultRow>> {
+        implements Statement<Optional<SelectAlbumById.ResultRow>>, StatementMetadata {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -116,5 +117,15 @@ public record SelectAlbumById(
     @Override
     public Optional<SelectAlbumById.ResultRow> decodeAffectedRows(long affectedRows) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String operationName() {
+        return "SELECT";
+    }
+
+    @Override
+    public String collectionName() {
+        return "albums";
     }
 }

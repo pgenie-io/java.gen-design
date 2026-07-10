@@ -1,6 +1,8 @@
 package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.java.richclient.RichClientConfig;
+import io.pgenie.java.richclient.Session;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -16,7 +18,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * same point. Testcontainers' Ryuk reaper container handles cleanup when the JVM
  * exits, so no explicit {@code stop()} call is needed.
  *
- * <p>Each test method receives a fresh {@link MusicCatalogueSession} (created in
+ * <p>Each test method receives a fresh {@link Session} (created in
  * {@link #openSession} and closed in {@link #closeSession}) so that connection state
  * does not bleed between tests.
  */
@@ -158,18 +160,22 @@ public abstract class AbstractDatabaseIT {
         }
     }
 
-    protected MusicCatalogueSession session;
+    protected Session session;
 
     @BeforeEach
     void openSession() {
-        MusicCatalogueConfig config = MusicCatalogueConfig
+        RichClientConfig config = RichClientConfig
             .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+            .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+            .withScopeVersion("1.0.1")
+            .withPoolName("music-catalogue-pool")
+            .withArtifactName("music-catalogue")
             .withMaximumPoolSize(1)
             .withConnectionTimeout(Duration.ofSeconds(5))
             .withStatementTimeout(Duration.ofSeconds(5))
             .withTransactionRetryAttempts(3)
             .withSlowQueryLogThreshold(Duration.ofSeconds(1));
-        session = new MusicCatalogueSession(config);
+        session = new Session(config);
     }
 
     @AfterEach

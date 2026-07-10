@@ -3,6 +3,8 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 import static org.junit.jupiter.api.Assertions.*;
 
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.java.richclient.RichClientConfig;
+import io.pgenie.java.richclient.Session;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -16,13 +18,17 @@ class GracefulCloseIT extends AbstractDatabaseIT {
     @Test
 
     void closeDrainsInFlightStatement() throws Exception {
-        var config = MusicCatalogueConfig
+        var config = RichClientConfig
                 .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue")
                 .withMaximumPoolSize(2)
                 .withConnectionTimeout(Duration.ofSeconds(1))
                 .withStatementTimeout(Duration.ofSeconds(30));
 
-        try (var closeSession = new MusicCatalogueSession(config)) {
+        try (var closeSession = new Session(config)) {
             CountDownLatch started = new CountDownLatch(1);
             ExecutorService executor = Executors.newSingleThreadExecutor();
             Future<?> future = executor.submit(() -> closeSession.execute(new SleepStatement(20, started)));
@@ -49,8 +55,13 @@ class GracefulCloseIT extends AbstractDatabaseIT {
     @Test
 
     void closeIsIdempotent() throws Exception {
-        var config = MusicCatalogueConfig.defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
-        var closeSession = new MusicCatalogueSession(config);
+        var config = RichClientConfig
+                .defaults(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword())
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue");
+        var closeSession = new Session(config);
         assertDoesNotThrow(closeSession::close);
         assertDoesNotThrow(closeSession::close);
         assertThrows(IllegalStateException.class, () -> closeSession.execute(new SleepStatement(1, new CountDownLatch(0))));

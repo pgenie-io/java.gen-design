@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.pgenie.java.richclient.StatementMetadata;
 
 /**
  * Type-safe binding for the {@code update_album_released} query.
@@ -36,7 +37,7 @@ public record UpdateAlbumReleased(
          * Maps to {@code $id} in the template.
          */
         long id)
-        implements Statement<Long> {
+        implements Statement<Long>, StatementMetadata {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -84,5 +85,15 @@ public record UpdateAlbumReleased(
     @Override
     public Long decodeResultSet(ResultSet rs) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String operationName() {
+        return "UPDATE";
+    }
+
+    @Override
+    public String collectionName() {
+        return "albums";
     }
 }

@@ -10,6 +10,7 @@ import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.codecs.*;
+import io.pgenie.java.richclient.StatementMetadata;
 
 /**
  * Type-safe binding for the {@code select_genre_by_path} query.
@@ -33,7 +34,7 @@ public record SelectGenreByPath(
          * Maps to {@code $path} in the template.
          */
         Ltree path)
-        implements Statement<SelectGenreByPath.Result> {
+        implements Statement<SelectGenreByPath.Result>, StatementMetadata {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -104,5 +105,15 @@ public record SelectGenreByPath(
     @Override
     public SelectGenreByPath.Result decodeAffectedRows(long affectedRows) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String operationName() {
+        return "SELECT";
+    }
+
+    @Override
+    public String collectionName() {
+        return "genres";
     }
 }
