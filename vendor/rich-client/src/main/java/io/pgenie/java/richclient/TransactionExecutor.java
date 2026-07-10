@@ -108,7 +108,7 @@ public final class TransactionExecutor {
 
             R result = transaction.executeOn(context, settings);
 
-            int attempts = computeAttemptCount(tracking);
+            int attempts = computeAttemptCount(tracking, true);
             span.setAttribute(ATTEMPT_COUNT_KEY, (long) attempts);
             span.setAttribute(OUTCOME_KEY, OUTCOME_COMMITTED);
             retriesCounter.add(Math.max(0, attempts - 1));
@@ -116,7 +116,7 @@ public final class TransactionExecutor {
 
             return result;
         } catch (Throwable t) {
-            int attempts = computeAttemptCount(tracking);
+            int attempts = computeAttemptCount(tracking, false);
             String outcome = classifyOutcome(t);
             span.setAttribute(ATTEMPT_COUNT_KEY, (long) attempts);
             span.setAttribute(OUTCOME_KEY, outcome);
@@ -151,10 +151,14 @@ public final class TransactionExecutor {
         return builder.startSpan();
     }
 
-    private static int computeAttemptCount(AttemptTrackingTransactionContext tracking) {
-        return tracking.committed()
-                ? tracking.rollbackCount() + 1
-                : Math.max(0, tracking.rollbackCount());
+    static int computeAttemptCount(AttemptTrackingTransactionContext tracking, boolean success) {
+        if (success) {
+            // Every rollback preceded a failed attempt; the final attempt succeeded.
+            return tracking.rollbackCount() + 1;
+        }
+        // Each rollback is a failed attempt. If there were no rollbacks (e.g. an Error was thrown
+        // before the retry loop could roll back), the failing execution still counts as one attempt.
+        return Math.max(1, tracking.rollbackCount());
     }
 
     private static String classifyOutcome(Throwable t) {
