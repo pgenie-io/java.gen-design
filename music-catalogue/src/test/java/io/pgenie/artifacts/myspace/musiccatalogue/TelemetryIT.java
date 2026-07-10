@@ -2,6 +2,7 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.data.MetricData;
@@ -21,8 +22,14 @@ import org.junit.jupiter.api.Test;
 
 class TelemetryIT extends AbstractDatabaseIT {
 
-    @Test
+    private static final AttributeKey<String> DB_SYSTEM_NAME_KEY = AttributeKey.stringKey("db.system.name");
+    private static final AttributeKey<String> DB_QUERY_TEXT_KEY = AttributeKey.stringKey("db.query.text");
+    private static final AttributeKey<String> DB_USER_KEY = AttributeKey.stringKey("pgenie.db.user");
+    private static final AttributeKey<String> STATEMENT_NAME_KEY = AttributeKey.stringKey("pgenie.statement.name");
+    private static final AttributeKey<Long> ATTEMPT_COUNT_KEY = AttributeKey.longKey("pgenie.transaction.attempt_count");
+    private static final AttributeKey<String> OUTCOME_KEY = AttributeKey.stringKey("pgenie.transaction.outcome");
 
+    @Test
     void statementAndTransactionSpansAndMetricsAreEmitted() throws Exception {
         InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
         InMemoryMetricReader metricReader = InMemoryMetricReader.create();
@@ -59,16 +66,39 @@ class TelemetryIT extends AbstractDatabaseIT {
             assertTrue(spanNames.contains("InsertAlbum"), "Expected InsertAlbum span, got: " + spanNames);
             assertTrue(spanNames.contains("transaction"), "Expected transaction span, got: " + spanNames);
 
+            SpanData statementSpan = spans.stream()
+                    .filter(s -> s.getName().equals("InsertAlbum"))
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals("postgresql", statementSpan.getAttributes().get(DB_SYSTEM_NAME_KEY));
+            assertNotNull(statementSpan.getAttributes().get(DB_QUERY_TEXT_KEY));
+            assertEquals("InsertAlbum", statementSpan.getAttributes().get(STATEMENT_NAME_KEY));
+            assertEquals(PG.getUsername(), statementSpan.getAttributes().get(DB_USER_KEY));
+            assertEquals(
+                    "io.pgenie.artifacts.myspace.musiccatalogue",
+                    statementSpan.getInstrumentationScopeInfo().getName());
+
+            SpanData transactionSpan = spans.stream()
+                    .filter(s -> s.getName().equals("transaction"))
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals("postgresql", transactionSpan.getAttributes().get(DB_SYSTEM_NAME_KEY));
+            assertNotNull(transactionSpan.getAttributes().get(ATTEMPT_COUNT_KEY));
+            assertNotNull(transactionSpan.getAttributes().get(OUTCOME_KEY));
+            assertEquals(
+                    "io.pgenie.artifacts.myspace.musiccatalogue",
+                    transactionSpan.getInstrumentationScopeInfo().getName());
+
             // Metrics must be collected while the session (and its pool gauges) is still
             // open: session.close() unregisters the gauge callbacks, so collecting after
             // close would miss the pool.connections.* series.
             var metrics = metricReader.collectAllMetrics();
             assertFalse(metrics.isEmpty(), "Expected metrics to be emitted");
             var metricNames = metrics.stream().map(MetricData::getName).toList();
-            assertTrue(metricNames.contains("pgenie.musiccatalogue.statement.duration"), metricNames::toString);
-            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.active"), metricNames::toString);
-            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.idle"), metricNames::toString);
-            assertTrue(metricNames.contains("pgenie.musiccatalogue.pool.connections.total"), metricNames::toString);
+            assertTrue(metricNames.contains("db.client.operation.duration"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.pool.connections.active"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.pool.connections.idle"), metricNames::toString);
+            assertTrue(metricNames.contains("pgenie.pool.connections.total"), metricNames::toString);
         } finally {
             telemetrySession.close();
         }

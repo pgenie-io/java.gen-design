@@ -3,9 +3,11 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.pgenie.java.richclient.RichClientConfig;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
@@ -102,5 +104,32 @@ class MusicCatalogueConfigTest {
 
         assertFalse(text.contains("pw"), "toString leaked the raw password: " + text);
         assertTrue(text.contains("***"), "toString should contain a redaction marker: " + text);
+    }
+
+    @Test
+    void toRichClientConfigMapsFieldsAndArtifactIdentity() {
+        var config = defaults()
+                .withMaximumPoolSize(42)
+                .withConnectionTimeout(Duration.ofSeconds(5))
+                .withStatementTimeout(Duration.ofSeconds(10))
+                .withTransactionRetryAttempts(7)
+                .withSlowQueryLogThreshold(Duration.ofMillis(500));
+
+        RichClientConfig rich = config.toRichClientConfig();
+
+        assertEquals(config.jdbcUrl(), rich.jdbcUrl());
+        assertEquals(config.user(), rich.user());
+        assertEquals(config.password(), rich.password());
+        assertEquals(config.maximumPoolSize(), rich.maximumPoolSize());
+        assertEquals(config.connectionTimeout(), rich.connectionTimeout());
+        assertEquals(config.statementTimeout(), rich.statementTimeout());
+        assertEquals(config.transactionRetryAttempts(), rich.transactionRetryAttempts());
+        assertEquals(config.slowQueryLogThreshold(), rich.slowQueryLogThreshold());
+        assertSame(config.openTelemetry(), rich.openTelemetry());
+
+        assertEquals("io.pgenie.artifacts.myspace.musiccatalogue", rich.scopeName());
+        assertEquals("1.0.1", rich.scopeVersion());
+        assertEquals("music-catalogue-pool", rich.poolName());
+        assertEquals("music-catalogue", rich.artifactName());
     }
 }

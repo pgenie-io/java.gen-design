@@ -103,7 +103,7 @@ class TransactionRetryIT extends AbstractDatabaseIT {
 
         meterProvider.forceFlush().join(5, TimeUnit.SECONDS);
         long retryCount = metricReader.collectAllMetrics().stream()
-                .filter(metric -> metric.getName().equals("pgenie.musiccatalogue.transaction.retries"))
+                .filter(metric -> metric.getName().equals("pgenie.transaction.retries"))
                 .flatMap(metric -> metric.getLongSumData().getPoints().stream())
                 .mapToLong(point -> point.getValue())
                 .sum();

@@ -2,6 +2,7 @@ package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.pgenie.java.richclient.RichClientConfig;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -199,6 +200,26 @@ public record MusicCatalogueConfig(
     public MusicCatalogueConfig withOpenTelemetry(OpenTelemetry openTelemetry) {
         return new MusicCatalogueConfig(jdbcUrl, user, password, maximumPoolSize, connectionTimeout,
                 statementTimeout, transactionRetryAttempts, slowQueryLogThreshold, openTelemetry);
+    }
+
+    /**
+     * Converts this artifact-specific config into the generic {@link RichClientConfig} used by the
+     * shared rich-client session implementation, supplying the artifact identity constants.
+     *
+     * @return a fully-populated {@link RichClientConfig}
+     */
+    public RichClientConfig toRichClientConfig() {
+        return RichClientConfig.defaults(jdbcUrl, user, password)
+                .withMaximumPoolSize(maximumPoolSize)
+                .withConnectionTimeout(connectionTimeout)
+                .withStatementTimeout(statementTimeout)
+                .withTransactionRetryAttempts(transactionRetryAttempts)
+                .withSlowQueryLogThreshold(slowQueryLogThreshold)
+                .withOpenTelemetry(openTelemetry)
+                .withScopeName("io.pgenie.artifacts.myspace.musiccatalogue")
+                .withScopeVersion("1.0.1")
+                .withPoolName("music-catalogue-pool")
+                .withArtifactName("music-catalogue");
     }
 
     /** Redacts {@link #password()} so it can't leak into logs or exception messages. */

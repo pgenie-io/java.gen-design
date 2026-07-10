@@ -48,6 +48,12 @@
             <version>2.0.17</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.pgenie.java</groupId>
+            <artifactId>rich-client</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>io.opentelemetry</groupId>
