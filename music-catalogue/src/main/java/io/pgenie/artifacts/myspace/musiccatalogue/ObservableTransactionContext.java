@@ -106,11 +106,13 @@ final class ObservableTransactionContext implements TransactionContext {
         rollbackCount++;
     }
 
-    boolean commitCalled() {
-        return commitCalled;
-    }
-
-    int rollbackCount() {
-        return rollbackCount;
+    /**
+     * Number of retries performed by the vendor retry loop, derived from the transaction
+     * context's commit/rollback bookkeeping: every rollback is a retry, except a final
+     * rollback that is never followed by a commit (an exhausted or aborted transaction),
+     * which counts as the last failed attempt rather than a retry of a subsequent one.
+     */
+    public long retryCount() {
+        return commitCalled ? rollbackCount : Math.max(0, rollbackCount - 1);
     }
 }
