@@ -14,6 +14,7 @@
 
     <modules>
         <module>vendor/postgresql-jdbc.java</module>
+        <module>vendor/rich-client</module>
         <module>music-catalogue</module>
     </modules>
 
