@@ -10,7 +10,6 @@ import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.Transaction;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -21,47 +20,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
 
-class TransactionRetryIT {
-
-    private static final PostgreSQLContainer<?> PG =
-            new PostgreSQLContainer<>("postgres:18").withCommand("postgres", "-c", "max_connections=200");
-
-    @BeforeAll
-    static void startContainer() {
-        PG.start();
-    }
-
-    @BeforeEach
-    void createCounterTable() throws SQLException {
-        try (Connection conn = openConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                        "create table if not exists retry_counter (id int primary key, value int not null)")) {
-            ps.execute();
-        }
-        try (Connection conn = openConnection();
-                PreparedStatement ps = conn.prepareStatement(
-                        "insert into retry_counter (id, value) values (1, 0) on conflict (id) do update set value = 0")) {
-            ps.executeUpdate();
-        }
-    }
-
-    @AfterEach
-    void dropCounterTable() throws SQLException {
-        try (Connection conn = openConnection();
-                PreparedStatement ps = conn.prepareStatement("drop table if exists retry_counter")) {
-            ps.execute();
-        }
-    }
-
-    private Connection openConnection() throws SQLException {
-        return DriverManager.getConnection(PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
-    }
+class TransactionRetryIT extends AbstractDatabaseIT {
 
     @Test
     void singleAttemptCommitSucceedsWithZeroRollbacks() throws SQLException {
