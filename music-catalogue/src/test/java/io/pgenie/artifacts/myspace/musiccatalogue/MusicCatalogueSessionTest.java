@@ -1,7 +1,6 @@
 package io.pgenie.artifacts.myspace.musiccatalogue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import io.codemine.java.postgresql.jdbc.IsolationLevel;
@@ -10,24 +9,11 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for the pure, package-private static helpers of {@link MusicCatalogueSession}:
- * default transaction settings, isolation-level attribute formatting, retry-count arithmetic and
- * JDBC URL redaction. Each takes its inputs as plain parameters so it can be tested without
- * standing up the session's HikariCP pool.
+ * isolation-level attribute formatting, retry-count arithmetic and JDBC URL redaction. Each
+ * takes its inputs as plain parameters so it can be tested without standing up the session's
+ * HikariCP pool.
  */
 class MusicCatalogueSessionTest {
-
-    @Test
-    void defaultTransactionSettingsUsesSerializableReadWrite() {
-        var config = MusicCatalogueConfig
-                .defaults("jdbc:postgresql://localhost/test", "user", "pw")
-                .withTransactionRetryAttempts(5);
-
-        TransactionSettings settings = MusicCatalogueSession.defaultTransactionSettings(config);
-
-        assertEquals(IsolationLevel.SERIALIZABLE, settings.isolationLevel());
-        assertFalse(settings.readOnly());
-        assertEquals(5, settings.maxAttempts());
-    }
 
     @Test
     void isolationLevelAttributeReturnsIsolationLevelName() {

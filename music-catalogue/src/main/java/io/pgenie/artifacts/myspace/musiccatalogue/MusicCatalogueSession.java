@@ -7,7 +7,6 @@ import io.codemine.java.postgresql.jdbc.IsolationLevel;
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.Transaction;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
@@ -52,9 +51,6 @@ public class MusicCatalogueSession implements AutoCloseable {
     private static final String POOL_NAME = "music-catalogue-pool";
 
     private static final AttributeKey<String> DB_SYSTEM_KEY = AttributeKey.stringKey("db.system");
-    private static final AttributeKey<String> DB_QUERY_TEXT_KEY = AttributeKey.stringKey("db.query.text");
-    private static final AttributeKey<String> DB_USER_KEY = AttributeKey.stringKey("db.user");
-    private static final AttributeKey<String> STATEMENT_NAME_KEY = AttributeKey.stringKey("pgenie.statement.name");
     private static final AttributeKey<String> POOL_NAME_KEY = AttributeKey.stringKey("pool.name");
     private static final AttributeKey<String> ISOLATION_LEVEL_KEY = AttributeKey.stringKey("db.transaction.isolation_level");
     private static final AttributeKey<Long> MAX_ATTEMPTS_KEY = AttributeKey.longKey("pgenie.transaction.max_attempts");
@@ -82,7 +78,7 @@ public class MusicCatalogueSession implements AutoCloseable {
         this.config = Objects.requireNonNull(config, "config");
         this.hikariDataSource = createHikariDataSource(config);
 
-        OpenTelemetry openTelemetry = config.openTelemetry() != null ? config.openTelemetry() : GlobalOpenTelemetry.get();
+        OpenTelemetry openTelemetry = config.openTelemetry();
         this.tracer = openTelemetry.getTracer(INSTRUMENTATION_SCOPE, INSTRUMENTATION_VERSION);
         this.meter = openTelemetry.getMeter(INSTRUMENTATION_SCOPE);
 
@@ -206,7 +202,7 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction) throws SQLException {
-        return executeTransaction(transaction, defaultTransactionSettings(config), Span.current());
+        return executeTransaction(transaction,  Span.current());
     }
 
     /**
@@ -223,7 +219,10 @@ public class MusicCatalogueSession implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction, Span parentSpan) throws SQLException {
-        return executeTransaction(transaction, defaultTransactionSettings(config), parentSpan);
+        return executeTransaction(transaction, new TransactionSettings(
+                IsolationLevel.SERIALIZABLE,
+                false,
+                config.transactionRetryAttempts()), parentSpan);
     }
 
     /**
@@ -295,12 +294,6 @@ public class MusicCatalogueSession implements AutoCloseable {
         }
     }
 
-    static TransactionSettings defaultTransactionSettings(MusicCatalogueConfig config) {
-        return new TransactionSettings(
-                IsolationLevel.SERIALIZABLE,
-                false,
-                config.transactionRetryAttempts());
-    }
 
     static String isolationLevelAttribute(TransactionSettings settings) {
         return settings.isolationLevel().name();
