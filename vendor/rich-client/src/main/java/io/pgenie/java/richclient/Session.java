@@ -163,7 +163,10 @@ public class Session implements AutoCloseable {
      * @throws SQLException if a database access error occurs
      */
     public <R> R executeTransaction(Transaction<R> transaction, Span parentSpan) throws SQLException {
-        return executeTransaction(transaction, defaultSettings(), parentSpan);
+        return executeTransaction(
+            transaction,
+            new TransactionSettings(IsolationLevel.SERIALIZABLE, false, config.transactionRetryAttempts()),
+            parentSpan);
     }
 
     /**
@@ -281,10 +284,6 @@ public class Session implements AutoCloseable {
         }
 
         logger.info("Session closed");
-    }
-
-    private TransactionSettings defaultSettings() {
-        return new TransactionSettings(IsolationLevel.SERIALIZABLE, false, config.transactionRetryAttempts());
     }
 
     private void ensureOpen() {
