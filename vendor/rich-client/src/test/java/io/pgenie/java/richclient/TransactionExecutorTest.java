@@ -16,28 +16,28 @@ class TransactionExecutorTest {
     void attemptCountForSuccessfulTransactionIncludesFinalAttempt() {
         var tracking = trackingWith(0, true);
 
-        assertEquals(1, TransactionExecutor.computeAttemptCount(tracking, true));
+        assertEquals(1, AttemptTrackingTransactionContext.computeAttemptCount(tracking, true));
     }
 
     @Test
     void attemptCountForSuccessfulRetriedTransactionAddsOneToRollbackCount() {
         var tracking = trackingWith(2, true);
 
-        assertEquals(3, TransactionExecutor.computeAttemptCount(tracking, true));
+        assertEquals(3, AttemptTrackingTransactionContext.computeAttemptCount(tracking, true));
     }
 
     @Test
     void attemptCountForFailedTransactionEqualsRollbackCount() {
         var tracking = trackingWith(3, false);
 
-        assertEquals(3, TransactionExecutor.computeAttemptCount(tracking, false));
+        assertEquals(3, AttemptTrackingTransactionContext.computeAttemptCount(tracking, false));
     }
 
     @Test
     void attemptCountForFailedTransactionWithNoRollbacksIsOne() {
         var tracking = trackingWith(0, false);
 
-        assertEquals(1, TransactionExecutor.computeAttemptCount(tracking, false));
+        assertEquals(1, AttemptTrackingTransactionContext.computeAttemptCount(tracking, false));
     }
 
     @Test
@@ -47,7 +47,7 @@ class TransactionExecutorTest {
         // determine the attempt count; adding one because commit was attempted would overcount.
         var tracking = trackingWith(2, true);
 
-        assertEquals(2, TransactionExecutor.computeAttemptCount(tracking, false));
+        assertEquals(2, AttemptTrackingTransactionContext.computeAttemptCount(tracking, false));
     }
 
     private static AttemptTrackingTransactionContext trackingWith(int rollbackCount, boolean commitCalled) {

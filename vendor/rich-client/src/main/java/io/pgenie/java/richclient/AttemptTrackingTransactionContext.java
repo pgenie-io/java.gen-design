@@ -150,4 +150,22 @@ public final class AttemptTrackingTransactionContext implements TransactionConte
         return state != null
                 && (state.equals("40001") || state.equals("40P01") || state.equals("23505"));
     }
+
+    /**
+     * Computes the number of attempts made by the transaction retry loop.
+     *
+     * <p>When the transaction succeeded, every rollback preceded a failed attempt and the final
+     * attempt succeeded. When the transaction failed, each rollback is a failed attempt; if there
+     * were no rollbacks, the failing execution still counts as one attempt.</p>
+     *
+     * @param tracking the tracking context with commit/rollback counters
+     * @param success  whether the transaction ultimately succeeded
+     * @return the total number of attempts
+     */
+    public static int computeAttemptCount(AttemptTrackingTransactionContext tracking, boolean success) {
+        if (success) {
+            return tracking.rollbackCount() + 1;
+        }
+        return Math.max(1, tracking.rollbackCount());
+    }
 }
