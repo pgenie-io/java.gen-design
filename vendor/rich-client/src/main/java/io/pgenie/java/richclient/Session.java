@@ -8,6 +8,7 @@ import io.codemine.java.postgresql.jdbc.IsolationLevel;
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.Transaction;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
+import io.pgenie.java.richclient.observability.TransactionObservability;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
@@ -76,10 +77,7 @@ public class Session implements AutoCloseable {
                 config.user(),
                 config.slowQueryLogThreshold());
         this.transactionExecutor = new TransactionExecutor(
-                tracer,
-                statementExecutor,
-                meter,
-                logger);
+                new TransactionObservability(tracer, meter, statementExecutor, logger));
         this.poolMetrics = new PoolMetrics(
                 meter,
                 dataSource.getHikariPoolMXBean(),

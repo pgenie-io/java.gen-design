@@ -8,11 +8,11 @@ import org.slf4j.Marker;
 /**
  * SLF4J logger implementation that records warn-level messages for testing.
  */
-final class CollectingLogger implements Logger {
+public final class CollectingLogger implements Logger {
 
     private final List<String> warnings = new ArrayList<>();
 
-    List<String> warnings() {
+    public List<String> warnings() {
         return warnings;
     }
 
