@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
-import io.pgenie.java.richclient.StatementMetadata;
+
 
 /**
  * Type-safe binding for the {@code select_genre_by_artist} query.
@@ -35,7 +35,7 @@ public record SelectGenreByArtist(
          * Maps to {@code $artist} in the template.
          */
         int artist)
-        implements Statement<SelectGenreByArtist.Result>, StatementMetadata {
+        implements Statement<SelectGenreByArtist.Result> {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -106,12 +106,12 @@ public record SelectGenreByArtist(
     }
 
     @Override
-    public String operationName() {
-        return "SELECT";
+    public java.util.Optional<String> operationName() {
+        return java.util.Optional.of("SELECT");
     }
 
     @Override
-    public String collectionName() {
-        return "genres";
+    public java.util.Optional<String> collectionName() {
+        return java.util.Optional.of("genres");
     }
 }

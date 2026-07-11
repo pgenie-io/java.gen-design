@@ -187,7 +187,7 @@ class SessionIT extends AbstractDatabaseIT {
                 .toList();
     }
 
-    private record SelectOneStatement() implements Statement<String>, StatementMetadata {
+    private record SelectOneStatement() implements Statement<String> {
         @Override
         public String sql() {
             return "select 1";
@@ -213,13 +213,13 @@ class SessionIT extends AbstractDatabaseIT {
         }
 
         @Override
-        public String operationName() {
-            return "SELECT";
+        public java.util.Optional<String> operationName() {
+            return java.util.Optional.of("SELECT");
         }
 
         @Override
-        public String collectionName() {
-            return "system";
+        public java.util.Optional<String> collectionName() {
+            return java.util.Optional.of("system");
         }
 
         @Override

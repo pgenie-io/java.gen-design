@@ -2,14 +2,11 @@ package io.pgenie.java.richclient;
 
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.StatementBatch;
-import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.common.Attributes;
-import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
-import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
+import io.pgenie.java.richclient.observability.SqlOperation;
+import io.pgenie.java.richclient.observability.StatementObservability;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -24,29 +21,12 @@ import org.slf4j.Logger;
  * and slow-query logging.
  *
  * <p>All statement execution in {@code rich-client} flows through this class so that trace,
- * metric and log instrumentation is kept in one place.</p>
+ * metric and log instrumentation is kept in one place. The actual telemetry logic is delegated
+ * to {@link StatementObservability}.</p>
  */
 public final class StatementExecutor {
 
-    private static final String DB_SYSTEM = "postgresql";
-
-    private static final String METRIC_NAME = "db.client.operation.duration";
-    private static final String METRIC_UNIT = "s";
-    private static final String METRIC_DESCRIPTION = "Duration of database client operations";
-
-    private static final AttributeKey<String> DB_SYSTEM_NAME_KEY = AttributeKey.stringKey("db.system.name");
-    private static final AttributeKey<String> DB_QUERY_TEXT_KEY = AttributeKey.stringKey("db.query.text");
-    private static final AttributeKey<String> DB_OPERATION_NAME_KEY = AttributeKey.stringKey("db.operation.name");
-    private static final AttributeKey<String> DB_COLLECTION_NAME_KEY = AttributeKey.stringKey("db.collection.name");
-    private static final AttributeKey<String> STATEMENT_NAME_KEY = AttributeKey.stringKey("pgenie.statement.name");
-    private static final AttributeKey<String> DB_USER_KEY = AttributeKey.stringKey("pgenie.db.user");
-    private static final AttributeKey<Long> BATCH_SIZE_KEY = AttributeKey.longKey("db.operation.batch.size");
-
-    private final Tracer tracer;
-    private final DoubleHistogram durationHistogram;
-    private final String dbUser;
-    private final Duration slowQueryLogThreshold;
-    private final Logger logger;
+    private final StatementObservability observability;
 
     /**
      * Creates a new executor.
@@ -65,15 +45,12 @@ public final class StatementExecutor {
             Logger logger,
             String dbUser,
             Duration slowQueryLogThreshold) {
-        this.tracer = Objects.requireNonNull(tracer, "tracer");
-        Objects.requireNonNull(meter, "meter");
-        this.logger = Objects.requireNonNull(logger, "logger");
-        this.dbUser = Objects.requireNonNull(dbUser, "dbUser");
-        this.slowQueryLogThreshold = Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
-        this.durationHistogram = meter.histogramBuilder(METRIC_NAME)
-                .setUnit(METRIC_UNIT)
-                .setDescription(METRIC_DESCRIPTION)
-                .build();
+        this.observability = new StatementObservability(
+                Objects.requireNonNull(tracer, "tracer"),
+                Objects.requireNonNull(meter, "meter"),
+                Objects.requireNonNull(logger, "logger"),
+                Objects.requireNonNull(dbUser, "dbUser"),
+                Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold"));
     }
 
     /**
@@ -88,26 +65,9 @@ public final class StatementExecutor {
     public <R> R execute(Statement<R> statement, Connection connection, Span parentSpan) throws SQLException {
         Objects.requireNonNull(statement, "statement");
         Objects.requireNonNull(connection, "connection");
-        String statementName = statement.getClass().getSimpleName();
-        StatementMetadata metadata = metadataOf(statement);
 
-        Span span = startStatementSpan(statementName, statement.sql(), metadata, parentSpan);
-        long startNanos = System.nanoTime();
-        try (var scope = span.makeCurrent()) {
-            R result = statement.executeOn(connection);
-            span.setStatus(StatusCode.OK);
-            return result;
-        } catch (Throwable t) {
-            span.recordException(t);
-            span.setStatus(StatusCode.ERROR, t.getMessage());
-            throw t;
-        } finally {
-            long durationNanos = System.nanoTime() - startNanos;
-            double durationSeconds = durationNanos / 1_000_000_000.0;
-            recordDuration(statement.sql(), statementName, metadata, durationSeconds);
-            maybeLogSlowQuery(statementName, durationNanos, durationSeconds);
-            span.end();
-        }
+        SqlOperation<R> operation = () -> statement.executeOn(connection);
+        return observability.observeStatement(statement, parentSpan, operation);
     }
 
     /**
@@ -137,104 +97,15 @@ public final class StatementExecutor {
         }
 
         StatementBatch<R> batch = new StatementBatch<>(statementList);
-        StatementMetadata metadata = metadataOf(statementList.get(0));
-        String statementName = "batch";
+        Statement<?> first = statementList.get(0);
 
-        Span span = startBatchSpan(statementName, batch.sql(), batch.size(), metadata, parentSpan);
-        long startNanos = System.nanoTime();
-        try (var scope = span.makeCurrent()) {
-            List<R> results = batch.execute(connection);
-            span.setStatus(StatusCode.OK);
-            return results;
-        } catch (Throwable t) {
-            span.recordException(t);
-            span.setStatus(StatusCode.ERROR, t.getMessage());
-            throw t;
-        } finally {
-            long durationNanos = System.nanoTime() - startNanos;
-            double durationSeconds = durationNanos / 1_000_000_000.0;
-            recordDuration(batch.sql(), statementName, metadata, durationSeconds);
-            maybeLogSlowQuery(statementName, durationNanos, durationSeconds);
-            span.end();
-        }
-    }
-
-    private Span startStatementSpan(
-            String statementName,
-            String sql,
-            StatementMetadata metadata,
-            Span parentSpan) {
-        var builder = tracer.spanBuilder(statementName)
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .setAttribute(DB_QUERY_TEXT_KEY, sql)
-                .setAttribute(STATEMENT_NAME_KEY, statementName)
-                .setAttribute(DB_USER_KEY, dbUser);
-        applyMetadataAttributes(builder, metadata);
-        applyParentSpan(builder, parentSpan);
-        return builder.startSpan();
-    }
-
-    private Span startBatchSpan(
-            String statementName,
-            String sql,
-            int batchSize,
-            StatementMetadata metadata,
-            Span parentSpan) {
-        var builder = tracer.spanBuilder(statementName)
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .setAttribute(DB_QUERY_TEXT_KEY, sql)
-                .setAttribute(STATEMENT_NAME_KEY, statementName)
-                .setAttribute(BATCH_SIZE_KEY, (long) batchSize)
-                .setAttribute(DB_USER_KEY, dbUser);
-        applyMetadataAttributes(builder, metadata);
-        applyParentSpan(builder, parentSpan);
-        return builder.startSpan();
-    }
-
-    private void applyMetadataAttributes(io.opentelemetry.api.trace.SpanBuilder builder, StatementMetadata metadata) {
-        if (metadata != null) {
-            builder.setAttribute(DB_OPERATION_NAME_KEY, metadata.operationName());
-            builder.setAttribute(DB_COLLECTION_NAME_KEY, metadata.collectionName());
-        }
-    }
-
-    private void applyParentSpan(io.opentelemetry.api.trace.SpanBuilder builder, Span parentSpan) {
-        if (parentSpan != null) {
-            builder.setParent(io.opentelemetry.context.Context.current().with(parentSpan));
-        }
-    }
-
-    private void recordDuration(
-            String sql,
-            String statementName,
-            StatementMetadata metadata,
-            double durationSeconds) {
-        var attributesBuilder = Attributes.builder()
-                .put(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .put(DB_QUERY_TEXT_KEY, sql)
-                .put(STATEMENT_NAME_KEY, statementName);
-        if (metadata != null) {
-            attributesBuilder.put(DB_OPERATION_NAME_KEY, metadata.operationName());
-            attributesBuilder.put(DB_COLLECTION_NAME_KEY, metadata.collectionName());
-        }
-        durationHistogram.record(durationSeconds, attributesBuilder.build());
-    }
-
-    private void maybeLogSlowQuery(String statementName, long durationNanos, double durationSeconds) {
-        if (Duration.ofNanos(durationNanos).compareTo(slowQueryLogThreshold) > 0) {
-            logger.warn("Slow query detected: {} took {} seconds", statementName, durationSeconds);
-        }
+        SqlOperation<List<R>> operation = () -> batch.execute(connection);
+        return observability.observeBatch(batch.sql(), first, batch.size(), parentSpan, operation);
     }
 
     private static <R> List<Statement<R>> copyStatements(Iterable<? extends Statement<R>> statements) {
         List<Statement<R>> list = new ArrayList<>();
         statements.forEach(list::add);
         return list;
-    }
-
-    private static StatementMetadata metadataOf(Statement<?> statement) {
-        return statement instanceof StatementMetadata metadata ? metadata : null;
     }
 }

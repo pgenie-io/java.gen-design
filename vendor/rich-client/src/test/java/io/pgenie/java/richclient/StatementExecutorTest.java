@@ -80,7 +80,7 @@ class StatementExecutorTest {
     void singleStatementSpanAttributesAndMetricPoint() throws SQLException {
         StatementExecutor executor = executor(Duration.ofSeconds(1));
         var statement = new MetadataStatement(
-                "INSERT INTO albums (title) VALUES (?)", "INSERT", "albums", "ok");
+                "INSERT INTO albums (title) VALUES (?)", "ok", "INSERT", "albums");
 
         String result = executor.execute(statement, dummyConnection(), null);
 
@@ -118,8 +118,8 @@ class StatementExecutorTest {
         int[] batchResults = {1, 1};
         PreparedStatement preparedStatement = stubPreparedStatement(batchResults);
         Connection connection = stubConnection(preparedStatement);
-        var statement1 = new BatchStatement("UPDATE albums SET title = ?", "UPDATE", "albums", "r1");
-        var statement2 = new BatchStatement("UPDATE albums SET title = ?", "UPDATE", "albums", "r2");
+        var statement1 = new BatchStatement("UPDATE albums SET title = ?", "r1", "UPDATE", "albums");
+        var statement2 = new BatchStatement("UPDATE albums SET title = ?", "r2", "UPDATE", "albums");
 
         List<String> results = executor.executeBatch(List.of(statement1, statement2), connection, null);
 
@@ -293,10 +293,10 @@ class StatementExecutorTest {
 
     record MetadataStatement(
             String sql,
-            String operationName,
-            String collectionName,
-            String result)
-            implements Statement<String>, StatementMetadata {
+            String result,
+            String opName,
+            String colName)
+            implements Statement<String> {
         @Override
         public void bindParams(PreparedStatement preparedStatement) {}
 
@@ -318,6 +318,16 @@ class StatementExecutorTest {
         @Override
         public String executeOn(Connection connection) {
             return result;
+        }
+
+        @Override
+        public java.util.Optional<String> operationName() {
+            return java.util.Optional.ofNullable(opName);
+        }
+
+        @Override
+        public java.util.Optional<String> collectionName() {
+            return java.util.Optional.ofNullable(colName);
         }
     }
 
@@ -378,10 +388,10 @@ class StatementExecutorTest {
 
     record BatchStatement(
             String sql,
-            String operationName,
-            String collectionName,
-            String result)
-            implements Statement<String>, StatementMetadata {
+            String result,
+            String opName,
+            String colName)
+            implements Statement<String> {
         @Override
         public void bindParams(PreparedStatement preparedStatement) {}
 
@@ -398,6 +408,16 @@ class StatementExecutorTest {
         @Override
         public String decodeAffectedRows(long affectedRows) {
             return result;
+        }
+
+        @Override
+        public java.util.Optional<String> operationName() {
+            return java.util.Optional.ofNullable(opName);
+        }
+
+        @Override
+        public java.util.Optional<String> collectionName() {
+            return java.util.Optional.ofNullable(colName);
         }
     }
 

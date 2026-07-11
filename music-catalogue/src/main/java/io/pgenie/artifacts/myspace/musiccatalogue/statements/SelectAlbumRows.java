@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 import io.codemine.java.postgresql.jdbc.Codec;
 import io.codemine.java.postgresql.jdbc.Statement;
-import io.pgenie.java.richclient.StatementMetadata;
 import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
 
 /**
@@ -29,7 +28,7 @@ import io.pgenie.artifacts.myspace.musiccatalogue.types.*;
  */
 public record SelectAlbumRows(
         )
-        implements Statement<SelectAlbumRows.Result>, StatementMetadata {
+        implements Statement<SelectAlbumRows.Result> {
     
     // -------------------------------------------------------------------------
     // Result type
@@ -91,12 +90,12 @@ public record SelectAlbumRows(
     }
 
     @Override
-    public String operationName() {
-        return "SELECT";
+    public java.util.Optional<String> operationName() {
+        return java.util.Optional.of("SELECT");
     }
 
     @Override
-    public String collectionName() {
-        return "albums";
+    public java.util.Optional<String> collectionName() {
+        return java.util.Optional.of("albums");
     }
 }
