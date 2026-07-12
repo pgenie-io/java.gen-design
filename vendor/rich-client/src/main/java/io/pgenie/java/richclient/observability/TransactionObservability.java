@@ -1,9 +1,11 @@
 package io.pgenie.java.richclient.observability;
 
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.codemine.java.postgresql.jdbc.StatementBatch;
 import io.codemine.java.postgresql.jdbc.TransactionContext;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
@@ -11,10 +13,11 @@ import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
-import io.pgenie.java.richclient.StatementExecutor;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Savepoint;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
@@ -28,8 +31,8 @@ import org.slf4j.Logger;
  *   <li>Creating the single INTERNAL {@code "transaction"} span and pre-setting attributes from
  *       {@link TransactionSettings}.</li>
  *   <li>Tracking commit and rollback attempts during the vendor retry loop.</li>
- *   <li>Routing statement/batch execution through {@link StatementExecutor} so that statement
- *       spans are parented under the transaction span.</li>
+ *   <li>Building a {@link StatementObservability} leaf for every statement/batch executed inside
+ *       the transaction, parented to the transaction span.</li>
  *   <li>Classifying the final outcome ({@code committed}, {@code retries_exhausted},
  *       {@code non_retryable_failure}) and recording it on the span.</li>
  *   <li>Recording transaction retries on the {@code pgenie.transaction.retries} counter.</li>
@@ -87,31 +90,74 @@ public final class TransactionObservability {
 
     private final Tracer tracer;
     private final LongCounter retriesCounter;
-    private final StatementExecutor statementExecutor;
+    private final DoubleHistogram durationHistogram;
     private final Logger logger;
+    private final String dbUser;
+    private final Duration slowQueryLogThreshold;
+    private final Span boundParentSpan;
 
     /**
      * Creates a new transaction observability helper.
      *
-     * @param tracer            the OpenTelemetry tracer used to create the transaction span
-     * @param meter             the OpenTelemetry meter used to derive the retries counter
-     * @param statementExecutor the statement executor used to run statements/batches under the
-     *                          transaction span
-     * @param logger            the SLF4J logger used to warn when retries are exhausted
+     * @param tracer               the OpenTelemetry tracer used to create the transaction span and
+     *                             the statement spans of statements executed inside it
+     * @param meter                the OpenTelemetry meter used to derive the retries counter
+     * @param durationHistogram    the shared {@code db.client.operation.duration} histogram, from
+     *                             {@link StatementObservability#buildDurationHistogram}
+     * @param logger               the SLF4J logger used to warn when retries are exhausted and for
+     *                             slow-query warnings on statements executed inside the transaction
+     * @param dbUser               the database user to attach as {@code pgenie.db.user} on statement
+     *                             spans executed inside the transaction
+     * @param slowQueryLogThreshold queries running longer than this threshold are logged as slow;
+     *                             zero logs every query; must not be negative
      * @throws NullPointerException if any argument is null
      */
     public TransactionObservability(
             Tracer tracer,
             Meter meter,
-            StatementExecutor statementExecutor,
-            Logger logger) {
+            DoubleHistogram durationHistogram,
+            Logger logger,
+            String dbUser,
+            Duration slowQueryLogThreshold) {
         this.tracer = Objects.requireNonNull(tracer, "tracer");
         Objects.requireNonNull(meter, "meter");
-        this.statementExecutor = Objects.requireNonNull(statementExecutor, "statementExecutor");
+        this.durationHistogram = Objects.requireNonNull(durationHistogram, "durationHistogram");
         this.logger = Objects.requireNonNull(logger, "logger");
+        this.dbUser = Objects.requireNonNull(dbUser, "dbUser");
+        this.slowQueryLogThreshold = Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
         this.retriesCounter = meter.counterBuilder(RETRIES_METRIC_NAME)
                 .setDescription(RETRIES_METRIC_DESCRIPTION)
                 .build();
+        this.boundParentSpan = null;
+    }
+
+    private TransactionObservability(TransactionObservability source, Span boundParentSpan) {
+        this.tracer = source.tracer;
+        this.retriesCounter = source.retriesCounter;
+        this.durationHistogram = source.durationHistogram;
+        this.logger = source.logger;
+        this.dbUser = source.dbUser;
+        this.slowQueryLogThreshold = source.slowQueryLogThreshold;
+        this.boundParentSpan = boundParentSpan;
+    }
+
+    /**
+     * Returns a copy of this wrapper that falls back to {@code parentSpan} as the parent for any
+     * {@link #observe} call that itself passes a {@code null} parent span.
+     *
+     * <p>An explicit, non-null parent span passed to {@link #observe} always takes precedence
+     * over the bound span.</p>
+     *
+     * @param parentSpan the default parent span, or {@code null} to fall through to the current
+     *                   OpenTelemetry context as before
+     * @return a copy of this wrapper bound to {@code parentSpan}
+     */
+    TransactionObservability withParentSpan(Span parentSpan) {
+        return new TransactionObservability(this, parentSpan);
+    }
+
+    private Span effectiveParentSpan(Span parentSpan) {
+        return parentSpan != null ? parentSpan : boundParentSpan;
     }
 
     /**
@@ -119,8 +165,8 @@ public final class TransactionObservability {
      *
      * <p>The returned observation implements {@link TransactionContext} and can be passed directly
      * to the vendor transaction body. Its {@link TransactionObservation#span()} is the transaction
-     * span; statement execution through the observation is automatically routed through
-     * {@link StatementExecutor} with that span as parent.</p>
+     * span; statement execution through the observation builds a {@link StatementObservability}
+     * leaf per statement/batch, parented to that span.</p>
      *
      * @param settings   the transaction settings
      * @param connection the JDBC connection to use
@@ -132,7 +178,7 @@ public final class TransactionObservability {
             TransactionSettings settings,
             Connection connection,
             Span parentSpan) {
-        return new TransactionObservation(startSpan(settings, parentSpan), connection, settings);
+        return new TransactionObservation(startSpan(settings, effectiveParentSpan(parentSpan)), connection, settings);
     }
 
     private Span startSpan(TransactionSettings settings, Span parentSpan) {
@@ -197,8 +243,9 @@ public final class TransactionObservability {
      * A single in-flight transaction observation.
      *
      * <p>Implements {@link TransactionContext} by delegating to a fresh
-     * {@link TransactionContext#of(Connection)} while counting commit/rollback attempts and routing
-     * statement execution through {@link StatementExecutor} under the transaction span.</p>
+     * {@link TransactionContext#of(Connection)} while counting commit/rollback attempts and
+     * building a {@link StatementObservability} leaf per statement/batch, parented to the
+     * transaction span.</p>
      */
     public final class TransactionObservation implements TransactionContext, AutoCloseable {
 
@@ -248,12 +295,26 @@ public final class TransactionObservability {
 
         @Override
         public <R> R execute(Statement<R> statement) throws SQLException {
-            return statementExecutor.execute(statement, connection, span);
+            StatementObservability leaf = StatementObservability.forStatement(
+                    tracer, durationHistogram, logger, dbUser, slowQueryLogThreshold, statement, span);
+            return leaf.execute(() -> statement.executeOn(connection));
         }
 
         @Override
         public <R> List<R> executeBatch(Iterable<? extends Statement<R>> statements) throws SQLException {
-            return statementExecutor.executeBatch(statements, connection, span);
+            List<Statement<R>> statementList = new ArrayList<>();
+            statements.forEach(statementList::add);
+            if (statementList.isEmpty()) {
+                return List.of();
+            }
+
+            StatementBatch<R> batch = new StatementBatch<>(statementList);
+            Statement<?> first = statementList.get(0);
+
+            StatementObservability leaf = StatementObservability.forBatch(
+                    tracer, durationHistogram, logger, dbUser, slowQueryLogThreshold,
+                    batch.sql(), first, batch.size(), span);
+            return leaf.execute(() -> batch.execute(connection));
         }
 
         @Override

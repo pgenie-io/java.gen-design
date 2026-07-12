@@ -23,7 +23,6 @@ import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import io.pgenie.java.richclient.CollectingLogger;
-import io.pgenie.java.richclient.StatementExecutor;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -60,14 +59,13 @@ class TransactionObservabilityTest {
     }
 
     private TransactionObservability observability() {
-        StatementExecutor statementExecutor = new StatementExecutor(
+        return new TransactionObservability(
                 openTelemetry.getTracer("test"),
                 openTelemetry.getMeter("test"),
+                StatementObservability.buildDurationHistogram(openTelemetry.getMeter("test")),
                 logger,
                 "test-user",
                 Duration.ofSeconds(1));
-        return new TransactionObservability(
-                openTelemetry.getTracer("test"), openTelemetry.getMeter("test"), statementExecutor, logger);
     }
 
     @Test
@@ -130,6 +128,37 @@ class TransactionObservabilityTest {
         assertEquals(2L, span.getAttributes().get(ATTEMPT_COUNT), "commit attempt must not add to the rollback count");
         assertEquals(OUTCOME_NON_RETRYABLE_FAILURE, span.getAttributes().get(OUTCOME));
         assertEquals(0, logger.warnings().size(), "non-retryable failures should not be logged as warnings");
+    }
+
+    @Test
+    void withParentSpanBindsDefaultParentWhenObserveOmitsIt() {
+        var parent = openTelemetry.getTracer("test").spanBuilder("parent").startSpan();
+
+        var observation = observability().withParentSpan(parent).observe(TransactionSettings.SERIALIZABLE_READ, noOpConnection(), null);
+        observation.markCommitted();
+        observation.close();
+        parent.end();
+        flush();
+
+        SpanData span = singleTransactionSpan();
+        assertEquals(parent.getSpanContext().getSpanId(), span.getParentSpanId());
+    }
+
+    @Test
+    void explicitObserveParentSpanOverridesBoundParentSpan() {
+        var bound = openTelemetry.getTracer("test").spanBuilder("bound").startSpan();
+        var explicit = openTelemetry.getTracer("test").spanBuilder("explicit").startSpan();
+
+        var observation = observability().withParentSpan(bound)
+                .observe(TransactionSettings.SERIALIZABLE_READ, noOpConnection(), explicit);
+        observation.markCommitted();
+        observation.close();
+        bound.end();
+        explicit.end();
+        flush();
+
+        SpanData span = singleTransactionSpan();
+        assertEquals(explicit.getSpanContext().getSpanId(), span.getParentSpanId());
     }
 
     @Test

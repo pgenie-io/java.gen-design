@@ -13,17 +13,17 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.slf4j.Logger;
 
 /**
- * Shared observability wrapper for statement and batch execution.
+ * Observability for one particular statement execution (or one particular batch).
  *
- * <p>Owns the OpenTelemetry CLIENT spans, the {@code db.client.operation.duration}
- * histogram and SLF4J slow-query logging for all statement execution in {@code rich-client}.
- * The class is intentionally execution-agnostic: callers supply the database operation as a
- * {@link SqlOperation} and this class decorates it with telemetry.</p>
+ * <p>Bound at construction to the statement (or batch) whose telemetry it will emit — the CLIENT
+ * span is already started by the time a {@code StatementObservability} exists. Callers obtain an
+ * instance via the package-private {@link #forStatement} / {@link #forBatch} factories and must
+ * call {@link #execute} exactly once to run the operation and end the span.</p>
  */
 public final class StatementObservability {
 
@@ -41,104 +41,170 @@ public final class StatementObservability {
     static final AttributeKey<String> DB_USER_KEY = AttributeKey.stringKey("pgenie.db.user");
     static final AttributeKey<Long> BATCH_SIZE_KEY = AttributeKey.longKey("db.operation.batch.size");
 
-    private final Tracer tracer;
     private final DoubleHistogram durationHistogram;
-    private final String dbUser;
-    private final Duration slowQueryLogThreshold;
     private final Logger logger;
+    private final Duration slowQueryLogThreshold;
+    private final String statementName;
+    private final String sql;
+    private final Optional<String> operationName;
+    private final Optional<String> collectionName;
+    private final Span span;
+
+    private StatementObservability(
+            DoubleHistogram durationHistogram,
+            Logger logger,
+            Duration slowQueryLogThreshold,
+            String statementName,
+            String sql,
+            Optional<String> operationName,
+            Optional<String> collectionName,
+            Span span) {
+        this.durationHistogram = durationHistogram;
+        this.logger = logger;
+        this.slowQueryLogThreshold = slowQueryLogThreshold;
+        this.statementName = statementName;
+        this.sql = sql;
+        this.operationName = operationName;
+        this.collectionName = collectionName;
+        this.span = span;
+    }
 
     /**
-     * Creates a new statement observability wrapper.
+     * Builds the {@code db.client.operation.duration} histogram from a {@link Meter}.
      *
-     * @param tracer               the OpenTelemetry tracer used to create CLIENT spans
-     * @param meter                the OpenTelemetry meter used to derive the duration histogram
-     * @param logger               the SLF4J logger used for slow-query warnings
-     * @param dbUser               the database user to attach as {@code pgenie.db.user}
-     * @param slowQueryLogThreshold queries running longer than this threshold are logged as slow;
-     *                             zero logs every query; must not be negative
-     * @throws NullPointerException if any argument is null
+     * <p>Callers build this once per session and pass the same instance into every
+     * {@link #forStatement} / {@link #forBatch} call, so that every statement execution in a
+     * session records onto one shared instrument.</p>
+     *
+     * @param meter the OpenTelemetry meter used to derive the histogram
+     * @return the duration histogram
+     * @throws NullPointerException if {@code meter} is null
      */
-    public StatementObservability(
-            Tracer tracer,
-            Meter meter,
-            Logger logger,
-            String dbUser,
-            Duration slowQueryLogThreshold) {
-        this.tracer = Objects.requireNonNull(tracer, "tracer");
+    public static DoubleHistogram buildDurationHistogram(Meter meter) {
         Objects.requireNonNull(meter, "meter");
-        this.logger = Objects.requireNonNull(logger, "logger");
-        this.dbUser = Objects.requireNonNull(dbUser, "dbUser");
-        this.slowQueryLogThreshold = Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
-        this.durationHistogram = meter.histogramBuilder(METRIC_NAME)
+        return meter.histogramBuilder(METRIC_NAME)
                 .setUnit(METRIC_UNIT)
                 .setDescription(METRIC_DESCRIPTION)
                 .build();
     }
 
     /**
-     * Observes execution of a single statement.
+     * Builds a {@code StatementObservability} bound to one statement, starting its CLIENT span.
      *
-     * <p>Creates a CLIENT span named {@code statement.name()}, records the operation on the
-     * {@code db.client.operation.duration} histogram and emits a slow-query warning if the
-     * threshold is exceeded. The span is parented to {@code parentSpan} when non-null, otherwise
-     * to the current OpenTelemetry context.</p>
-     *
-     * @param statement  the statement whose metadata and SQL define span/metric attributes
-     * @param parentSpan the parent span, or {@code null} to use the current context
-     * @param operation  the operation that actually executes the statement
-     * @return the operation result
-     * @throws SQLException if the operation throws
+     * @param tracer               the OpenTelemetry tracer used to create the CLIENT span
+     * @param durationHistogram    the shared duration histogram, from {@link #buildDurationHistogram}
+     * @param logger               the SLF4J logger used for slow-query warnings
+     * @param dbUser               the database user to attach as {@code pgenie.db.user}
+     * @param slowQueryLogThreshold queries running longer than this threshold are logged as slow;
+     *                             zero logs every query; must not be negative
+     * @param statement            the statement whose metadata and SQL define span/metric attributes
+     * @param parentSpan           the parent span, or {@code null} to use the current context
+     * @return a new statement observability, with its span already started
+     * @throws NullPointerException if any argument other than {@code parentSpan} is null
      */
-    public <R> R observeStatement(
+    static StatementObservability forStatement(
+            Tracer tracer,
+            DoubleHistogram durationHistogram,
+            Logger logger,
+            String dbUser,
+            Duration slowQueryLogThreshold,
             Statement<?> statement,
-            Span parentSpan,
-            SqlOperation<R> operation) throws SQLException {
+            Span parentSpan) {
+        Objects.requireNonNull(tracer, "tracer");
+        Objects.requireNonNull(durationHistogram, "durationHistogram");
+        Objects.requireNonNull(logger, "logger");
+        Objects.requireNonNull(dbUser, "dbUser");
+        Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
         Objects.requireNonNull(statement, "statement");
-        Objects.requireNonNull(operation, "operation");
 
         String statementName = statement.statementName();
-        Span span = startStatementSpan(statementName, statement.sql(), statement, parentSpan);
-        return observe(span, statementName, statement.sql(), statement, operation);
+        String sql = statement.sql();
+        Optional<String> operationName = statement.operationName();
+        Optional<String> collectionName = statement.collectionName();
+
+        var builder = tracer.spanBuilder(statementName)
+                .setSpanKind(SpanKind.CLIENT)
+                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
+                .setAttribute(DB_QUERY_TEXT_KEY, sql)
+                .setAttribute(STATEMENT_NAME_KEY, statementName)
+                .setAttribute(DB_USER_KEY, dbUser);
+        applyMetadataAttributes(builder, operationName, collectionName);
+        applyParentSpan(builder, parentSpan);
+
+        return new StatementObservability(
+                durationHistogram, logger, slowQueryLogThreshold,
+                statementName, sql, operationName, collectionName, builder.startSpan());
     }
 
     /**
-     * Observes execution of a batch of statements.
+     * Builds a {@code StatementObservability} bound to one batch of statements, starting its
+     * CLIENT span.
      *
-     * <p>Creates a CLIENT span named {@code "batch"}, adds {@code db.operation.batch.size} to
-     * the span, records the operation on the {@code db.client.operation.duration} histogram
-     * without the batch-size attribute, and emits a slow-query warning if the threshold is
-     * exceeded.</p>
-     *
-     * @param batchSql               the SQL text shared by every statement in the batch
+     * @param tracer                  the OpenTelemetry tracer used to create the CLIENT span
+     * @param durationHistogram       the shared duration histogram, from {@link #buildDurationHistogram}
+     * @param logger                  the SLF4J logger used for slow-query warnings
+     * @param dbUser                  the database user to attach as {@code pgenie.db.user}
+     * @param slowQueryLogThreshold    queries running longer than this threshold are logged as slow;
+     *                                zero logs every query; must not be negative
+     * @param batchSql                the SQL text shared by every statement in the batch
      * @param representativeStatement a representative statement used for optional metadata
-     *                               attributes ({@code db.operation.name}, {@code db.collection.name})
-     * @param batchSize              the number of statements in the batch
-     * @param parentSpan             the parent span, or {@code null} to use the current context
-     * @param operation              the operation that actually executes the batch
-     * @return the operation result
-     * @throws SQLException if the operation throws
+     *                                attributes ({@code db.operation.name}, {@code db.collection.name})
+     * @param batchSize               the number of statements in the batch
+     * @param parentSpan              the parent span, or {@code null} to use the current context
+     * @return a new statement observability, with its span already started
+     * @throws NullPointerException if any argument other than {@code parentSpan} is null
      */
-    public <R> List<R> observeBatch(
+    static StatementObservability forBatch(
+            Tracer tracer,
+            DoubleHistogram durationHistogram,
+            Logger logger,
+            String dbUser,
+            Duration slowQueryLogThreshold,
             String batchSql,
             Statement<?> representativeStatement,
             int batchSize,
-            Span parentSpan,
-            SqlOperation<List<R>> operation) throws SQLException {
+            Span parentSpan) {
+        Objects.requireNonNull(tracer, "tracer");
+        Objects.requireNonNull(durationHistogram, "durationHistogram");
+        Objects.requireNonNull(logger, "logger");
+        Objects.requireNonNull(dbUser, "dbUser");
+        Objects.requireNonNull(slowQueryLogThreshold, "slowQueryLogThreshold");
         Objects.requireNonNull(batchSql, "batchSql");
         Objects.requireNonNull(representativeStatement, "representativeStatement");
-        Objects.requireNonNull(operation, "operation");
 
         String statementName = "batch";
-        Span span = startBatchSpan(statementName, batchSql, batchSize, representativeStatement, parentSpan);
-        return observe(span, statementName, batchSql, representativeStatement, operation);
+        Optional<String> operationName = representativeStatement.operationName();
+        Optional<String> collectionName = representativeStatement.collectionName();
+
+        var builder = tracer.spanBuilder(statementName)
+                .setSpanKind(SpanKind.CLIENT)
+                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
+                .setAttribute(DB_QUERY_TEXT_KEY, batchSql)
+                .setAttribute(STATEMENT_NAME_KEY, statementName)
+                .setAttribute(BATCH_SIZE_KEY, (long) batchSize)
+                .setAttribute(DB_USER_KEY, dbUser);
+        applyMetadataAttributes(builder, operationName, collectionName);
+        applyParentSpan(builder, parentSpan);
+
+        return new StatementObservability(
+                durationHistogram, logger, slowQueryLogThreshold,
+                statementName, batchSql, operationName, collectionName, builder.startSpan());
     }
 
-    private <R> R observe(
-            Span span,
-            String statementName,
-            String sql,
-            Statement<?> statement,
-            SqlOperation<R> operation) throws SQLException {
+    /**
+     * Runs {@code operation} under this statement's already-started span, recording the
+     * {@code db.client.operation.duration} histogram point and any slow-query warning, then ends
+     * the span.
+     *
+     * <p>Must be called exactly once per {@code StatementObservability}.</p>
+     *
+     * @param operation the operation that actually executes the statement or batch
+     * @return the operation result
+     * @throws SQLException if the operation throws
+     */
+    public <R> R execute(SqlOperation<R> operation) throws SQLException {
+        Objects.requireNonNull(operation, "operation");
+
         long startNanos = System.nanoTime();
         try (var scope = span.makeCurrent()) {
             R result = operation.execute();
@@ -151,72 +217,35 @@ public final class StatementObservability {
         } finally {
             long durationNanos = System.nanoTime() - startNanos;
             double durationSeconds = durationNanos / 1_000_000_000.0;
-            recordDuration(sql, statementName, statement, durationSeconds);
-            maybeLogSlowQuery(statementName, durationNanos, durationSeconds);
+            recordDuration(durationSeconds);
+            maybeLogSlowQuery(durationNanos, durationSeconds);
             span.end();
         }
     }
 
-    private Span startStatementSpan(
-            String statementName,
-            String sql,
-            Statement<?> statement,
-            Span parentSpan) {
-        var builder = tracer.spanBuilder(statementName)
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .setAttribute(DB_QUERY_TEXT_KEY, sql)
-                .setAttribute(STATEMENT_NAME_KEY, statementName)
-                .setAttribute(DB_USER_KEY, dbUser);
-        applyMetadataAttributes(builder, statement);
-        applyParentSpan(builder, parentSpan);
-        return builder.startSpan();
+    private static void applyMetadataAttributes(
+            SpanBuilder builder, Optional<String> operationName, Optional<String> collectionName) {
+        operationName.ifPresent(v -> builder.setAttribute(DB_OPERATION_NAME_KEY, v));
+        collectionName.ifPresent(v -> builder.setAttribute(DB_COLLECTION_NAME_KEY, v));
     }
 
-    private Span startBatchSpan(
-            String statementName,
-            String sql,
-            int batchSize,
-            Statement<?> statement,
-            Span parentSpan) {
-        var builder = tracer.spanBuilder(statementName)
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .setAttribute(DB_QUERY_TEXT_KEY, sql)
-                .setAttribute(STATEMENT_NAME_KEY, statementName)
-                .setAttribute(BATCH_SIZE_KEY, (long) batchSize)
-                .setAttribute(DB_USER_KEY, dbUser);
-        applyMetadataAttributes(builder, statement);
-        applyParentSpan(builder, parentSpan);
-        return builder.startSpan();
-    }
-
-    private void applyMetadataAttributes(SpanBuilder builder, Statement<?> statement) {
-        statement.operationName().ifPresent(v -> builder.setAttribute(DB_OPERATION_NAME_KEY, v));
-        statement.collectionName().ifPresent(v -> builder.setAttribute(DB_COLLECTION_NAME_KEY, v));
-    }
-
-    private void applyParentSpan(SpanBuilder builder, Span parentSpan) {
+    private static void applyParentSpan(SpanBuilder builder, Span parentSpan) {
         if (parentSpan != null) {
             builder.setParent(Context.current().with(parentSpan));
         }
     }
 
-    private void recordDuration(
-            String sql,
-            String statementName,
-            Statement<?> statement,
-            double durationSeconds) {
+    private void recordDuration(double durationSeconds) {
         var attributesBuilder = Attributes.builder()
                 .put(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
                 .put(DB_QUERY_TEXT_KEY, sql)
                 .put(STATEMENT_NAME_KEY, statementName);
-        statement.operationName().ifPresent(v -> attributesBuilder.put(DB_OPERATION_NAME_KEY, v));
-        statement.collectionName().ifPresent(v -> attributesBuilder.put(DB_COLLECTION_NAME_KEY, v));
+        operationName.ifPresent(v -> attributesBuilder.put(DB_OPERATION_NAME_KEY, v));
+        collectionName.ifPresent(v -> attributesBuilder.put(DB_COLLECTION_NAME_KEY, v));
         durationHistogram.record(durationSeconds, attributesBuilder.build());
     }
 
-    private void maybeLogSlowQuery(String statementName, long durationNanos, double durationSeconds) {
+    private void maybeLogSlowQuery(long durationNanos, double durationSeconds) {
         if (Duration.ofNanos(durationNanos).compareTo(slowQueryLogThreshold) > 0) {
             logger.warn("Slow query detected: {} took {} seconds", statementName, durationSeconds);
         }

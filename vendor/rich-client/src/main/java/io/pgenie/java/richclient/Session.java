@@ -8,13 +8,9 @@ import io.codemine.java.postgresql.jdbc.IsolationLevel;
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.Transaction;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
-import io.pgenie.java.richclient.observability.TransactionObservability;
-import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.api.trace.Tracer;
+import io.pgenie.java.richclient.observability.SessionObservability;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,18 +36,9 @@ public class Session implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Session.class);
 
-    private static final String DB_SYSTEM = "postgresql";
-
-    private static final AttributeKey<String> DB_SYSTEM_NAME_KEY = AttributeKey.stringKey("db.system.name");
-    private static final AttributeKey<Long> CLOSE_CONNECTIONS_REMAINING_KEY =
-            AttributeKey.longKey("pgenie.session.close.connections_remaining");
-
     private final RichClientConfig config;
     private final HikariDataSource dataSource;
-    private final StatementExecutor statementExecutor;
-    private final TransactionExecutor transactionExecutor;
-    private final PoolMetrics poolMetrics;
-    private final Tracer tracer;
+    private final SessionObservability observability;
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -66,24 +53,8 @@ public class Session implements AutoCloseable {
      */
     public Session(RichClientConfig config) {
         this.config = Objects.requireNonNull(config, "config");
-        this.tracer = config.openTelemetry().getTracer(config.scopeName(), config.scopeVersion());
-        Meter meter = config.openTelemetry().getMeter(config.scopeName());
-
         this.dataSource = createHikariDataSource(config);
-        this.statementExecutor = new StatementExecutor(
-                tracer,
-                meter,
-                logger,
-                config.user(),
-                config.slowQueryLogThreshold());
-        this.transactionExecutor = new TransactionExecutor(
-                new TransactionObservability(tracer, meter, statementExecutor, logger));
-        this.poolMetrics = new PoolMetrics(
-                meter,
-                dataSource.getHikariPoolMXBean(),
-                config.poolName());
-
-        logger.info("Session opened for jdbcUrl={} user={}", redactUrl(config.jdbcUrl()), config.user());
+        this.observability = SessionObservability.fromConfig(config, dataSource.getHikariPoolMXBean());
     }
 
     private static HikariDataSource createHikariDataSource(RichClientConfig config) {
@@ -132,7 +103,7 @@ public class Session implements AutoCloseable {
         Objects.requireNonNull(statement, "statement");
 
         try (Connection connection = dataSource.getConnection()) {
-            return statementExecutor.execute(statement, connection, parentSpan);
+            return observability.forStatement(statement, parentSpan).execute(() -> statement.executeOn(connection));
         }
     }
 
@@ -200,7 +171,8 @@ public class Session implements AutoCloseable {
         Objects.requireNonNull(settings, "settings");
 
         try (Connection connection = dataSource.getConnection()) {
-            return transactionExecutor.execute(transaction, settings, connection, parentSpan);
+            TransactionExecutor executor = new TransactionExecutor(observability.forTransaction(settings, parentSpan));
+            return executor.execute(transaction, settings, connection, parentSpan);
         }
     }
 
@@ -210,10 +182,7 @@ public class Session implements AutoCloseable {
      * @return {@code true} if the database round-trip succeeds, {@code false} otherwise
      */
     public boolean healthCheck() {
-        Span span = tracer.spanBuilder("healthCheck")
-                .setSpanKind(SpanKind.CLIENT)
-                .setAttribute(DB_SYSTEM_NAME_KEY, DB_SYSTEM)
-                .startSpan();
+        Span span = observability.startHealthCheckSpan();
 
         try (Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement("select 1")) {
@@ -245,9 +214,7 @@ public class Session implements AutoCloseable {
             return;
         }
 
-        logger.info("Closing Session");
-
-        poolMetrics.close();
+        SessionObservability.CloseHandle close = observability.startClose();
 
         HikariPoolMXBean pool = dataSource.getHikariPoolMXBean();
         Instant deadline = Instant.now().plus(Duration.ofSeconds(10));
@@ -267,41 +234,12 @@ public class Session implements AutoCloseable {
 
         dataSource.close();
 
-        Span span = tracer.spanBuilder("session.close")
-                .setSpanKind(SpanKind.INTERNAL)
-                .setAttribute(CLOSE_CONNECTIONS_REMAINING_KEY, (long) remaining)
-                .startSpan();
-        try {
-            if (remaining > 0) {
-                span.setStatus(StatusCode.ERROR, remaining + " active connection(s) remained at close deadline");
-            } else {
-                span.setStatus(StatusCode.OK);
-            }
-        } finally {
-            span.end();
-        }
-
-        logger.info("Session closed");
+        close.finish(remaining);
     }
 
     private void ensureOpen() {
         if (closed.get()) {
             throw new IllegalStateException("Session is closed");
         }
-    }
-
-    static String redactUrl(String url) {
-        if (url == null) {
-            return null;
-        }
-        int passwordIndex = url.toLowerCase().indexOf("password=");
-        if (passwordIndex == -1) {
-            return url;
-        }
-        int ampersandIndex = url.indexOf('&', passwordIndex);
-        if (ampersandIndex == -1) {
-            return url.substring(0, passwordIndex + 9) + "***";
-        }
-        return url.substring(0, passwordIndex + 9) + "***" + url.substring(ampersandIndex);
     }
 }

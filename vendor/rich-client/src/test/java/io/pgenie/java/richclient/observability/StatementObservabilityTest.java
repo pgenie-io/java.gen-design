@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.codemine.java.postgresql.jdbc.Statement;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -37,6 +38,12 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Each test constructs a {@code StatementObservability} bound to one particular statement (or
+ * batch) via the package-private {@code forStatement}/{@code forBatch} factories, then calls
+ * {@link StatementObservability#execute} exactly once, matching how {@code SessionObservability}
+ * and {@code TransactionObservability} build and use them in production.
+ */
 class StatementObservabilityTest {
 
     private InMemorySpanExporter spanExporter;
@@ -45,6 +52,7 @@ class StatementObservabilityTest {
     private SdkMeterProvider meterProvider;
     private OpenTelemetrySdk openTelemetry;
     private CollectingLogger logger;
+    private DoubleHistogram durationHistogram;
 
     @BeforeEach
     void setUp() {
@@ -61,24 +69,26 @@ class StatementObservabilityTest {
                 .setMeterProvider(meterProvider)
                 .build();
         logger = new CollectingLogger();
+        durationHistogram = StatementObservability.buildDurationHistogram(openTelemetry.getMeter("test"));
     }
 
-    private StatementObservability observability(Duration slowQueryThreshold) {
-        return new StatementObservability(
+    private StatementObservability forStatement(Statement<?> statement, Duration slowQueryThreshold) {
+        return StatementObservability.forStatement(
                 openTelemetry.getTracer("test"),
-                openTelemetry.getMeter("test"),
+                durationHistogram,
                 logger,
                 "test-user",
-                slowQueryThreshold);
+                slowQueryThreshold,
+                statement,
+                null);
     }
 
     @Test
     void singleStatementSpanAttributesAndMetricPoint() throws SQLException {
-        StatementObservability observability = observability(Duration.ofSeconds(1));
         var statement = new MetadataStatement(
                 "INSERT INTO albums (title) VALUES (?)", "ok", "INSERT", "albums");
 
-        String result = observability.observeStatement(statement, null, () -> "ok");
+        String result = forStatement(statement, Duration.ofSeconds(1)).execute(() -> "ok");
 
         assertEquals("ok", result);
         flush();
@@ -110,12 +120,21 @@ class StatementObservabilityTest {
 
     @Test
     void batchSpanAttributesAndMetricPoint() throws SQLException {
-        StatementObservability observability = observability(Duration.ofSeconds(1));
         var statement = new MetadataStatement(
                 "UPDATE albums SET title = ?", "r1", "UPDATE", "albums");
 
-        List<String> results = observability.observeBatch(
-                statement.sql(), statement, 2, null, () -> List.of("r1", "r2"));
+        StatementObservability observability = StatementObservability.forBatch(
+                openTelemetry.getTracer("test"),
+                durationHistogram,
+                logger,
+                "test-user",
+                Duration.ofSeconds(1),
+                statement.sql(),
+                statement,
+                2,
+                null);
+
+        List<String> results = observability.execute(() -> List.of("r1", "r2"));
 
         assertEquals(List.of("r1", "r2"), results);
         flush();
@@ -146,10 +165,9 @@ class StatementObservabilityTest {
 
     @Test
     void statementWithoutMetadataOmitsOperationAndCollectionAttributes() throws SQLException {
-        StatementObservability observability = observability(Duration.ofSeconds(1));
         var statement = new SimpleStatement("SELECT 1", "one");
 
-        observability.observeStatement(statement, null, () -> "one");
+        forStatement(statement, Duration.ofSeconds(1)).execute(() -> "one");
         flush();
 
         SpanData span = spanExporter.getFinishedSpanItems().get(0);
@@ -165,12 +183,11 @@ class StatementObservabilityTest {
 
     @Test
     void exceptionPathSetsErrorStatusAndRecordsException() {
-        StatementObservability observability = observability(Duration.ofSeconds(1));
         var statement = new FailingStatement("INSERT INTO albums VALUES (1)");
 
         SQLException thrown = assertThrows(
                 SQLException.class,
-                () -> observability.observeStatement(statement, null, () -> {
+                () -> forStatement(statement, Duration.ofSeconds(1)).execute(() -> {
                     throw new SQLException("boom");
                 }));
 
@@ -186,10 +203,9 @@ class StatementObservabilityTest {
 
     @Test
     void slowQueryLogThresholdTriggersWarnLog() throws SQLException {
-        StatementObservability observability = observability(Duration.ofNanos(1));
         var statement = new SlowStatement("SELECT pg_sleep(0)", 50L);
 
-        observability.observeStatement(statement, null, () -> {
+        forStatement(statement, Duration.ofNanos(1)).execute(() -> {
             try {
                 TimeUnit.MILLISECONDS.sleep(statement.sleepMillis());
             } catch (InterruptedException e) {
@@ -207,11 +223,13 @@ class StatementObservabilityTest {
 
     @Test
     void parentSpanIsHonored() throws SQLException {
-        StatementObservability observability = observability(Duration.ofSeconds(1));
         var parent = openTelemetry.getTracer("test").spanBuilder("parent").startSpan();
         var statement = new SimpleStatement("SELECT 1", "one");
 
-        observability.observeStatement(statement, parent, () -> "one");
+        StatementObservability observability = StatementObservability.forStatement(
+                openTelemetry.getTracer("test"), durationHistogram, logger, "test-user",
+                Duration.ofSeconds(1), statement, parent);
+        observability.execute(() -> "one");
         parent.end();
         flush();
 
@@ -222,6 +240,21 @@ class StatementObservabilityTest {
                 .findFirst()
                 .orElseThrow();
         assertEquals(parent.getSpanContext().getSpanId(), statementSpan.getParentSpanId());
+    }
+
+    @Test
+    void eachStatementProducesItsOwnIndependentSpan() throws SQLException {
+        var statementA = new MetadataStatement("SELECT a", "a", "SELECT", "a_table");
+        var statementB = new MetadataStatement("SELECT b", "b", "SELECT", "b_table");
+
+        forStatement(statementA, Duration.ofSeconds(1)).execute(() -> "a");
+        forStatement(statementB, Duration.ofSeconds(1)).execute(() -> "b");
+        flush();
+
+        List<SpanData> spans = spanExporter.getFinishedSpanItems();
+        assertEquals(2, spans.size());
+        assertTrue(spans.stream().anyMatch(s -> "a_table".equals(s.getAttributes().get(DB_COLLECTION_NAME_KEY))));
+        assertTrue(spans.stream().anyMatch(s -> "b_table".equals(s.getAttributes().get(DB_COLLECTION_NAME_KEY))));
     }
 
     private void flush() {

@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.codemine.java.postgresql.jdbc.Statement;
 import io.codemine.java.postgresql.jdbc.Transaction;
 import io.codemine.java.postgresql.jdbc.TransactionSettings;
+import io.pgenie.java.richclient.observability.StatementObservability;
 import io.pgenie.java.richclient.observability.TransactionObservability;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.SpanKind;
@@ -78,18 +79,14 @@ class TransactionExecutorIT extends AbstractDatabaseIT {
                 .build();
         logger = new CollectingLogger();
 
-        StatementExecutor statementExecutor = new StatementExecutor(
-                openTelemetry.getTracer("test"),
-                openTelemetry.getMeter("test"),
-                logger,
-                "test-user",
-                Duration.ofSeconds(1));
         transactionExecutor = new TransactionExecutor(
                 new TransactionObservability(
                         openTelemetry.getTracer("test"),
                         openTelemetry.getMeter("test"),
-                        statementExecutor,
-                        logger));
+                        StatementObservability.buildDurationHistogram(openTelemetry.getMeter("test")),
+                        logger,
+                        "test-user",
+                        Duration.ofSeconds(1)));
     }
 
     @Test
